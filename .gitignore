@@ -119,3 +119,15 @@ dist
 .tern-port
 simulation.py
 holy lands bot start.bat.lnk
+data/winners.json
+data/winners.json
+data/weeklyPolls.json
+data/transactions.json
+data/pointsTransactions.json
+data/raidSignUps.json
+data/pointsBalances.json
+data/ngpEvents.json
+data/guildData.json
+data/bup.json
+data/bosses.json
+data/allocationHistory.json
