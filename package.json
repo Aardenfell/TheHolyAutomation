@@ -1,0 +1,47 @@
+{
+	"name": "the-holy-automation",
+	"version": "1.0.0",
+	"description": "A powerful Discord bot for managing The Holy Lands guild, featuring NGP systems, raid management, voice hubs, and more.",
+	"main": "bot.js",
+	"scripts": {
+	  "start": "node bot.js --trace-warnings",
+	  "dev": "nodemon bot.js --trace-warnings",
+	  "lint": "eslint .",
+	  "test": "jest"
+	},
+	"keywords": [
+	  "discord-js",
+	  "guild-management",
+	  "ngp",
+	  "discord-bot",
+	  "raids"
+	],
+	"author": {
+	  "name": "Aardenfell",
+	  "url": "https://github.com/Aardenfell"
+	},
+	"license": "MIT",
+	"homepage": "https://github.com/Aardenfell/TheHolyAutomation",
+	"repository": {
+	  "type": "git",
+	  "url": "https://github.com/Aardenfell/TheHolyAutomation.git"
+	},
+	"bugs": {
+	  "url": "https://github.com/Aardenfell/TheHolyAutomation/issues"
+	},
+	"dependencies": {
+	  "discord-api-types": "^0.37.43",
+	  "discord.js": "^14.11.0",
+	  "fast-levenshtein": "^3.0.0",
+	  "dotenv": "^16.0.3"
+	},
+	"devDependencies": {
+	  "eslint": "^8.50.0",
+	  "jest": "^29.0.3",
+	  "nodemon": "^3.0.1"
+	},
+	"engines": {
+	  "node": ">=18"
+	}
+  }
+  

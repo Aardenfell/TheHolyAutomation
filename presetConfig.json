@@ -1,0 +1,48 @@
+{
+    "prefix": "!",
+    "token": "YOUR_BOT_TOKEN_HERE",
+    "owner": "YOUR_OWNER_ID_HERE",
+    "client_id": "YOUR_CLIENT_ID_HERE",
+    "guild_id": "YOUR_GUILD_ID_HERE",
+    "systems": {
+        "ngpSystem": true,
+        "guildPointsSystem": true,    
+        "guildAccessSystem": true,
+        "bossRaidSystem": true,
+        "voiceHubSystem": true,
+        "debugSystem": true
+    },
+    "roles": {
+        "openNGP": "ROLE_ID_OPEN_NGP_HERE",
+        "distributor": "ROLE_ID_DISTRIBUTOR_HERE",
+        "restrictor": "ROLE_ID_RESTRICTOR_HERE",
+        "initiate": "ROLE_ID_INITIATE_HERE",
+        "envoy": "ROLE_ID_ENVOY_HERE",
+        "visitor": "ROLE_ID_VISITOR_HERE",
+        "raid": "ROLE_ID_RAID_HERE",
+        "raidStaff": "ROLE_ID_RAID_STAFF_HERE",
+        "someOtherRole": "ROLE_ID_HERE"
+    },
+    "channels": {
+        "logChannel": "CHANNEL_ID_LOG_CHANNEL_HERE",
+        "transactionsLog": "CHANNEL_ID_TRANSACTIONS_LOG_HERE",
+        "ngpNeedValidationSubsystemForumID": "CHANNEL_ID_NGP_VALIDATION_HERE", 
+        "ngpLog": "CHANNEL_ID_NGP_LOG_HERE",
+        "staffAlerts": "CHANNEL_ID_STAFF_ALERTS_HERE",
+        "visitorWelcome": "CHANNEL_ID_VISITOR_WELCOME_HERE",
+        "envoyWelcome": "CHANNEL_ID_ENVOY_WELCOME_HERE",
+        "recruitWelcome": "CHANNEL_ID_RECRUIT_WELCOME_HERE",
+        "raidSignUp": "CHANNEL_ID_RAID_SIGNUP_HERE",
+        "raidPassword": "CHANNEL_ID_RAID_PASSWORD_HERE",
+        "raidSupportThread": "CHANNEL_ID_RAID_SUPPORT_THREAD_HERE",
+        "hubChannel": "CHANNEL_ID_HUB_CHANNEL_HERE",
+        "someOtherChannel": "CHANNEL_ID_HERE"
+    },
+    "raids": {
+        "defaultRaidSchedule": {
+            "Friday": "21:30",
+            "Sunday": "17:30",
+            "Wednesday": "19:30"
+        }
+    }
+}

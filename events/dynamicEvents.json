@@ -1,0 +1,54 @@
+{
+    "events": [
+      {
+        "name": "Wolf Hunting Contest - Lv. 8-11",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "06:54"
+      },
+      {
+        "name": "Starlight Stones Ritual - Lv. 12-16",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      },
+      {
+        "name": "Lantern Seed Festival - Lv. 120-23",
+        "type": "Dynamic",
+        "rule": "Cooperative",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      },
+      {
+        "name": "Hidden Brown Mica - Lv. 28-31",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      },
+      {
+        "name": "Desert Caravan - Lv. 32-34",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      },
+      {
+        "name": "Stop the Mana Frenzy - Lv. 43-45",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      },
+      {
+        "name": "Talisman Delivery - Lv. 46-49",
+        "type": "Dynamic",
+        "rule": "Peace",
+        "recurrence": "bi-hourly",
+        "start_time": "05:00"
+      }
+    ]
+  }
+  
