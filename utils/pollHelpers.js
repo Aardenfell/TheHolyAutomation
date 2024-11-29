@@ -138,7 +138,7 @@ const pollHelpers = {
      * @returns {Object} Raid count allocation by day.
      */
     assignRaidCounts(totalRuns, allocationHistory = {}, overrideDays = null, overrideCounts = null) {
-        const defaultRaidDays = ["Friday", "Saturday", "Sunday", "Monday", "Wednesday"];
+        const defaultRaidDays = Object.keys(config.raids.defaultRaidSchedule);
         const raidDays = Array.isArray(overrideDays) && overrideDays.length > 0 ? overrideDays : defaultRaidDays;
 
         // Initialize raid counts and ensure allocationHistory keys exist
@@ -484,7 +484,13 @@ const pollHelpers = {
         }
     },
 
-
+     /** 
+             * @function getDayIndex
+            */
+     getDayIndex(day) {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days.indexOf(day);
+       },
 
     /**
      * @function createSignUpPosts
@@ -512,7 +518,7 @@ const pollHelpers = {
             return;
         }
 
-        for (const day of Object.keys(dayRaidCounts)) {
+        for (const day of Object.keys(defaultRaidSchedule)) {
             const runs = dayRaidCounts[day];
             if (runs <= 0) {
                 console.log(`Skipping ${day} as it has ${runs} runs.`);
@@ -521,6 +527,7 @@ const pollHelpers = {
 
             const password = this.generatePassword();
 
+            
             // Calculate the Unix timestamp for the specific raid time on the given day
             const raidDate = new Date();
             const [hours, minutes] = defaultRaidSchedule[day].split(':').map(Number);
