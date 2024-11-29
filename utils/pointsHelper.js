@@ -18,7 +18,7 @@ const { saveNGPEvents, getCurrentEvents } = require('./eventUtils');
 // Constants for file paths
 const balancesPath = path.join(__dirname, '../data/pointsBalances.json');
 const transactionsPath = path.join(__dirname, '../data/pointsTransactions.json');
-const logChannelId = config.channels.transactionLog;
+const logChannelId = config.channels.transactionsLog;
 
 /**********************************************************************/
 // JSON File Operations
