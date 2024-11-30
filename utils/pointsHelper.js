@@ -319,14 +319,12 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
       recipientId: recipientIds,
       amountPerRecipient: pointsPerParticipant, // Points per user
       totalAmount: totalDistributed, // Total points distributed
-      reason: `Participation reward for passing on NGP item of rarity ${rarity}$
-        {multiplierApplied ? ' (0.5x Guild Raid multiplier applied)' : ''}`,
+      reason: `Participation reward for passing on NGP item of rarity ${rarity}${multiplierApplied ? ' (0.5x Guild Raid multiplier applied)' : ''}`,
       timestamp: Math.floor(Date.now() / 1000),
     });
 
     console.log(
-      `Distributed ${pointsPerParticipant.toFixed(2)} points to ${numEligibleParticipants} participants who passed without bidding.$
-        {multiplierApplied ? ' (0.5x multiplier applied)' : ''}`
+      `Distributed ${pointsPerParticipant.toFixed(2)} points to ${numEligibleParticipants} participants who passed without bidding.${multiplierApplied ? ' (0.5x multiplier applied)' : ''}`
     );
     console.log(`Deducted ${totalDistributed.toFixed(2)} points from the reserve.`);
   } else {
