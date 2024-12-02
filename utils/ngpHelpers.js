@@ -1,7 +1,8 @@
 /**
- * @file NGP Helpers for managing participants' rolls and declaring winners.
+ * @file ngpHelpers.js
  * @author Aardenfell
- * @since 1.1.2
+ * @since 1.0.0
+ * @version 1.0.3
  */
 
 const fs = require('fs');
@@ -360,13 +361,48 @@ async function announceWinner(client, event, winner) {
 
         // Find or create the thread
         const thread = await findOrCreateThread(message, event.item, event.event_id);
-        const announcement = `🎉 Congratulations\n# ${winner.name}! \n\nYou have won the item:\n# **${event.item}**\n with a ${winner.roll_type} of ${winner.roll_value}.\n\n <@&${distributorPing}> please distribute the items.`;
 
+        // Prepare the announcement message
+        let announcement = `🎉 Congratulations\n# ${winner.name}! \n\nYou have won the item:\n# **${event.item}**\n with a ${winner.roll_type} of ${winner.roll_value}.`;
+
+        // If the winner's roll type was "Need", include reminder to check the user's build post
+        if (winner.roll_type === 'Need') {
+            // Fetch the forum channel and search for the user's post
+            const forumChannelId = config.channels.ngpNeedValidationSubsystemForumID;
+            const forumChannel = await client.channels.fetch(forumChannelId);
+
+            // Fetch all threads, including archived ones
+            const activeThreads = await forumChannel.threads.fetchActive();
+            const archivedThreads = await forumChannel.threads.fetchArchived();
+
+            // Combine active and archived threads
+            const allThreads = [
+                ...activeThreads.threads.values(),
+                ...archivedThreads.threads.values(),
+            ];
+
+            // Find the thread that matches the winner's ID or name
+            const winnerIdRaw = winner.name.replace(/[<@>]/g, ''); // Extract user ID
+            const normalizedName = winner.name.toLowerCase();
+            const matchingThread = allThreads.find(thread => 
+                thread.name.includes(winnerIdRaw) || thread.name.toLowerCase().includes(normalizedName)
+            );
+
+            // If a matching thread is found, include a link to it
+            if (matchingThread) {
+                announcement += `\n\n<@&${distributorPing}>, please double-check the winner's build in their post: ${matchingThread.url}`;
+            } else {
+                announcement += `\n\n<@&${distributorPing}>, please double-check the winner's build. No forum post was found.`;
+            }
+        } else {
+            // Default reminder to distribute the items
+            announcement += `\n\n<@&${distributorPing}> please distribute the items.`;
+        }
+
+        // Send the announcement either in the thread or reply to the original message
         if (thread) {
-            // Send announcement in the thread if it exists
             await thread.send({ content: announcement, allowedMentions: { parse: ["users", "roles"] } });
         } else {
-            // Otherwise, reply directly to the original message
             await message.reply({ content: announcement, allowedMentions: { parse: ["users", "roles"] } });
         }
     } catch (error) {
