@@ -468,29 +468,33 @@ const pollHelpers = {
 
             console.log(`Vote registered for boss ${boss.name} by user ${userId}`);
 
-            // Provide feedback to the user via interaction reply
+            
             await interaction.reply({
                 content: `✅ Your vote for **${boss.name}** has been registered!`,
                 ephemeral: true,
             });
         } else {
-            console.log(`User ${userId} already voted for ${boss.name}.`);
+            boss.votes = Math.max(0, (boss.votes || 0) -1);
+            boss.voters = boss.voters.filter(voter => voter !==userId);
+            this.savePollData(polls);
 
-            // Notify the user they already voted
+            console.log(`Vote removed for ${boss.name} by user ${userId}.`);
+
+            
             await interaction.reply({
-                content: `⚠️ You already voted for **${boss.name}**.`,
+                content: `❌ Your vote for **${boss.name}** has been removed!`,
                 ephemeral: true,
             });
         }
     },
 
-     /** 
-             * @function getDayIndex
-            */
-     getDayIndex(day) {
+    /**
+    * @function getDayIndex
+    **/
+    getDayIndex(day) {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         return days.indexOf(day);
-       },
+    },
 
     /**
      * @function createSignUpPosts
@@ -527,7 +531,7 @@ const pollHelpers = {
 
             const password = this.generatePassword();
 
-            
+
             // Calculate the Unix timestamp for the specific raid time on the given day
             const raidDate = new Date();
             const [hours, minutes] = defaultRaidSchedule[day].split(':').map(Number);
