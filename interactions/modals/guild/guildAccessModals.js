@@ -150,7 +150,7 @@ module.exports = {
                 const restrictorRole = interaction.guild.roles.cache.get(config.roles.restrictor);
                 const initiateRole = interaction.guild.roles.cache.get(config.roles.initiate);
                 const visitorRole = interaction.guild.roles.cache.get(config.roles.visitor);
-                const envoyRole = interaction.guild.roles.cache.find(config.roles.envoy);
+                const envoyRole = interaction.guild.roles.cache.get(config.roles.envoy);
 
                 // Create nickname with in-game name and guild
                 const nickname = `${ingameName} | ${guildName}`;
