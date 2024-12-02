@@ -25,7 +25,7 @@ module.exports = {
     async execute(interaction) {
         // Extract the action type and boss index from the button's customId.
         const [action, bossIndex] = interaction.customId.split('_');
-        const pollId = interaction.message.id; // The pollId is assumed to be the message ID.
+        const pollId = interaction.message.id; 
         const userId = interaction.user.id;
 
         // Log the voting attempt for debugging purposes.
@@ -39,7 +39,7 @@ module.exports = {
             console.error('Error registering vote:', error);
             await interaction.reply({
                 content: 'There was an error processing your vote. Please try again later.',
-                ephemeral: true, // Ensure the error message is only visible to the user who interacted.
+                ephemeral: true,
             });
         }
     }
