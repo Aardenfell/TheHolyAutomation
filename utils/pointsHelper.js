@@ -2,7 +2,7 @@
  * @file Helper functions to manage user point balances and log transactions in JSON files.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 1.0.3
  */
 
 // Required Node.js modules
@@ -149,8 +149,9 @@ function transferPoints(fromUserId, toUserId, amount) {
  * @param {number} transaction.amountPerRecipient - The amount of points each recipient receives.
  * @param {string} transaction.reason - The reason for the transfer.
  * @param {string} transaction.timestamp - The ISO string timestamp of the transaction.
+ * @param {string} [ngpLink] - (Optional) Link to the related NGP event post.
  */
-async function logTransaction(client, transaction) {
+async function logTransaction(client, transaction, ngpLink = null) {
   const transactionsData = readJson(transactionsPath);
 
   // Ensure transactions array exists
@@ -219,6 +220,11 @@ async function logTransaction(client, transaction) {
           { name: 'Timestamp', value: `<t:${newTransaction.timestamp}>` }
         );
 
+      // If an NGP link is provided, add it to the embed
+      if (ngpLink) {
+        transactionEmbed.addFields({ name: 'Related NGP Post', value: `${ngpLink}` });
+      }
+
       await logChannel.send({ embeds: [transactionEmbed] });
     } else {
       console.error('Log channel not found.');
@@ -244,7 +250,7 @@ function distributePointsIfNotDone(event, client) {
   }
 
   if (!event.points_distributed && Array.isArray(event.participants)) {
-    distributePointsByRarity(event.participants, event.rarity, client, event.isGuildRaid || false);
+    distributePointsByRarity(event.participants, event.rarity, client, event.isGuildRaid || false, event);
     event.points_distributed = true; // Mark points as distributed
 
     // Save the updated event to prevent re-distribution
@@ -264,7 +270,7 @@ function distributePointsIfNotDone(event, client) {
  * @param {object} client - The Discord client object.
  * @param {boolean} isGuildRaid - Whether this event is part of a Guild Raid.
  */
-async function distributePointsByRarity(participants, rarity, client, isGuildRaid = false) {
+async function distributePointsByRarity(participants, rarity, client, isGuildRaid = false, event) {
   if (!Array.isArray(participants)) {
     console.error('Invalid participants array in distributePointsByRarity:', participants);
     return;
@@ -313,6 +319,9 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
     // Deduct the total points distributed from the reserve
     updateUserBalance(config.client_id, -totalDistributed);
 
+    // Generate NGP post link if available
+    const ngpLink = `<#${event.message_id}>`;
+
     // Log a single transaction for all recipients
     await logTransaction(client, {
       senderId: config.client_id,
@@ -321,7 +330,7 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
       totalAmount: totalDistributed, // Total points distributed
       reason: `Participation reward for passing on NGP item of rarity ${rarity}${multiplierApplied ? ' (0.5x Guild Raid multiplier applied)' : ''}`,
       timestamp: Math.floor(Date.now() / 1000),
-    });
+    }, ngpLink);
 
     console.log(
       `Distributed ${pointsPerParticipant.toFixed(2)} points to ${numEligibleParticipants} participants who passed without bidding.${multiplierApplied ? ' (0.5x multiplier applied)' : ''}`
