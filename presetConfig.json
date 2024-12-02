@@ -6,6 +6,7 @@
     "guild_id": "YOUR_GUILD_ID_HERE",
     "systems": {
         "ngpSystem": true,
+        "ngpNeedValidationSubsystem": true,
         "guildPointsSystem": true,    
         "guildAccessSystem": true,
         "bossRaidSystem": true,
