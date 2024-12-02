@@ -2,7 +2,7 @@
  * @file ngpHelpers.js
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.3
+ * @version 1.1.0
  */
 
 const fs = require('fs');

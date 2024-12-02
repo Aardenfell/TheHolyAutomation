@@ -1,6 +1,9 @@
 /**
  * @file Poll Helpers for managing the weekly boss poll process, including poll creation, voting, and result processing.
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
+ * @author Aardenfell
+ * @since 1.0.0
+ * @version 1.1.0
  */
 
 const fs = require('fs');
