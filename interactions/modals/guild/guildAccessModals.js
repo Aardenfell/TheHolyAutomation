@@ -119,6 +119,9 @@ module.exports = {
                     referredPeople: [],
                 };
             }
+            
+            // Update guild information for the member
+            guildData[member.id].guild = guildInfo.name;
 
             // Handle referral points if applicable
             if (guildPointsSystemEnabled && referrerNamesRaw) {
