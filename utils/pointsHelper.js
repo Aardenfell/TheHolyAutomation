@@ -172,6 +172,25 @@ async function logTransaction(client, transaction, ngpLink = null) {
     return;
   }
 
+  // Determine the guild(s) involved in the transaction
+  const guildsInvolvedSet = new Set();
+  for (const userId of [...validSenders, ...validRecipients]) {
+    const member = await client.guilds.cache
+      .first() // Assuming only one guild, adjust if there are multiple guilds.
+      .members.fetch(userId)
+      .catch(() => null);
+
+    if (member) {
+      for (const [key, guild] of Object.entries(config.guilds)) {
+        if (member.roles.cache.has(guild.role_id)) {
+          guildsInvolvedSet.add(guild.name);
+        }
+      }
+    }
+  }
+
+  const guildsInvolved = [...guildsInvolvedSet].join(', ') || 'None';
+
   // Calculate total amount if not provided
   const calculatedTotalAmount = (transaction.amountPerRecipient || 0) * validRecipients.length;
   const totalAmount = transaction.totalAmount || calculatedTotalAmount;
@@ -185,6 +204,7 @@ async function logTransaction(client, transaction, ngpLink = null) {
     totalAmount: totalAmount,
     reason: transaction.reason || 'No reason provided',
     timestamp: transaction.timestamp || Math.floor(Date.now() / 1000),
+    guildsInvolved: guildsInvolved // Added guilds involved in transaction log
   };
   transactionsData.transactions.push(newTransaction);
 
@@ -217,6 +237,7 @@ async function logTransaction(client, transaction, ngpLink = null) {
           { name: 'To', value: recipientList || 'Unknown' },
           { name: 'Amount', value: `${transaction.amountPerRecipient || 0} per recipient (${totalAmount || 0} total)` },
           { name: 'Reason', value: transaction.reason },
+          { name: 'Guilds Involved', value: guildsInvolved }, // Added guilds involved in the transaction embed
           { name: 'Timestamp', value: `<t:${newTransaction.timestamp}>` }
         );
 
