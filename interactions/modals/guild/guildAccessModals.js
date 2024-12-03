@@ -48,6 +48,10 @@ module.exports = {
             }
             const guildRole = interaction.guild.roles.cache.get(guildInfo.role_id);
 
+            // Remove existing guild roles
+            const guildRoleIds = Object.values(config.guilds).map(guild => guild.role_id);
+            await member.roles.remove(guildRoleIds);
+
             // Roles to handle
             const restrictorRole = interaction.guild.roles.cache.get(config.roles.restrictor);
             const initiateRole = interaction.guild.roles.cache.get(config.roles.initiate);
