@@ -3,7 +3,7 @@
  * @description Handles interaction events for modals, such as new recruit, envoy, and sign-in forms.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const { Events } = require("discord.js");

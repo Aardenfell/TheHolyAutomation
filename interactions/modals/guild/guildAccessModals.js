@@ -3,7 +3,7 @@
  * @description Handles interaction events for the new recruit and envoy modals, updating roles, nicknames, and sending welcome messages.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const { saveGuildData, loadGuildData } = require('../../../utils/guildUtils.js');

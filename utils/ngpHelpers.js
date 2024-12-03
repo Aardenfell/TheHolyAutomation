@@ -2,7 +2,7 @@
  * @file ngpHelpers.js
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -187,9 +187,28 @@ async function postEventSummary(client, event) {
         return;
     }
 
+    // Determine the guild involved in the event
+    let guildInvolved = 'None';
+    const participant = event.participants[0];
+    if (participant) {
+        const member = await client.guilds.cache
+            .first() // Assuming only one guild, adjust if there are multiple guilds.
+            .members.fetch(participant.name.replace(/[<@>]/g, ''))
+            .catch(() => null);
+
+        if (member) {
+            for (const [key, guild] of Object.entries(config.guilds)) {
+                if (member.roles.cache.has(guild.role_id)) {
+                    guildInvolved = guild.name;
+                    break;
+                }
+            }
+        }
+    }
+
     const embed = new EmbedBuilder()
         .setTitle(`Expired NGP Event Summary: ${event.item}`)
-        .setDescription(`**Rarity**: ${event.rarity}\n**Event ID**: ${event.event_id}`)
+        .setDescription(`**Rarity**: ${event.rarity}\n**Event ID**: ${event.event_id}\n**Guild Involved**: ${guildInvolved}`)
         .addFields(
             { name: 'Created At', value: `<t:${event.created_at}:f>`, inline: true },
             { name: 'Expired At', value: `<t:${event.expires_at}:f>`, inline: true },

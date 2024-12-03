@@ -2,8 +2,8 @@
  * @file selectGuild.js
  * @description Handles the guild selection for new recruits.
  * @author Aardenfell
- * @since 1.0.0
- * @version 1.0.0
+ * @since 2.0.0
+ * @version 2.0.0
  */
 
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');

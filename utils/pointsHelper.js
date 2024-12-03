@@ -2,7 +2,7 @@
  * @file Helper functions to manage user point balances and log transactions in JSON files.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 // Required Node.js modules
