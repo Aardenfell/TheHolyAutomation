@@ -13,6 +13,16 @@
         "voiceHubSystem": true,
         "debugSystem": true
     },
+    "guilds": {
+		"guild1": {
+			"name": "Guild Name 1",
+			"role_id": "role_id_for_guild_1"
+		},
+		"guild2": {
+			"name": "Guild Name 2",
+			"role_id": "role_id_for_guild_2"
+		}
+	},
     "roles": {
         "openNGP": "ROLE_ID_OPEN_NGP_HERE",
         "distributor": "ROLE_ID_DISTRIBUTOR_HERE",
