@@ -1,9 +1,9 @@
 /**
- * @file NGP Need Handler
+ * @file ngpNeedButton.js
  * @description Handles the 'Need' interaction for NGP events, ensuring proper validation and roll tracking.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 /**********************************************************************/
@@ -46,7 +46,25 @@ module.exports = {
             const userId = `<@${interaction.user.id}>`;
             const userIdRaw = interaction.user.id;
             const userNickname = interaction.member ? interaction.member.displayName : interaction.user.username;
-            const forumChannelId = config.channels.ngpNeedValidationSubsystemForumID;
+
+            // Determine guild ID from the user's roles
+            let guildId = null;
+            const userRoles = interaction.member.roles.cache;
+            for (const guildKey in config.guilds) {
+                if (userRoles.has(config.guilds[guildKey].role_id)) {
+                    guildId = guildKey;
+                    break;
+                }
+            }
+
+            if (!guildId) {
+                return await interaction.editReply({
+                    content: 'You do not belong to any recognized guild, and therefore cannot participate in this NGP event.',
+                });
+            }
+
+            // Use the guild-specific forum channel ID
+            const forumChannelId = config.guilds[guildId].ngpNeedValidationSubsystemForumID;
 
             // Check if the event has expired or is no longer active
             if (!event.active) {
@@ -135,7 +153,7 @@ module.exports = {
 
                 if (!hasMatchingPost) {
                     return await interaction.editReply({
-                        content: 'You need a valid build post with your Discord ID or in-game name to use the Need button. Make one in <#1301552024818810942>.',
+                        content: `You need a valid build post with your Discord ID or in-game name to use the Need button. Make one in <#${forumChannelId}>.`,
                     });
                 }
             }
