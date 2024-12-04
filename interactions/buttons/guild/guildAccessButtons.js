@@ -9,7 +9,7 @@
 /**********************************************************************/
 // Required Modules
 
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -34,26 +34,26 @@ module.exports = {
         // Handle New Recruit Access
 
         if (customId === 'new_recruit') {
-            const modal = new ModalBuilder()
-                .setCustomId('new_recruit_modal')
-                .setTitle('New Recruit Information')
-                .addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('ingame_name')
-                            .setLabel('Enter your in-game name:')
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('referrer_name')
-                            .setLabel('Who referred you? (Optional, use ign)')
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(false)
-                    )
+            
+            // Create a dropdown for selecting a guild
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId('select_guild')
+                .setPlaceholder('Select the guild you are joining')
+                .addOptions(
+                    Object.entries(config.guilds).map(([key, guild]) => ({
+                        label: guild.name,
+                        value: key
+                    }))
                 );
-            await interaction.showModal(modal);
+
+            await interaction.reply({
+                content: 'Please select the guild you are joining:',
+                components: [new ActionRowBuilder().addComponents(selectMenu)],
+                ephemeral: true
+            });
+
+
+            
 
         /**********************************************************************/
         // Handle Visitor Access
