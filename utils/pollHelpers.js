@@ -728,15 +728,16 @@ const pollHelpers = {
         }
 
         const signUpChannelId = config.guilds[guildId].raidSignUp;
-        const passwordChannelId = config.guilds[guildId].raidPassword;
+        // const passwordChannelId = config.guilds[guildId].raidPassword;
+        const privateThreadId = config.channels.raidPasswordThread;
 
-        if (!signUpChannelId || !passwordChannelId) {
+        if (!signUpChannelId || !privateThreadId) {
             console.error(`Missing raidSignUp or raidPassword channel in config for guildId: ${guildId}`);
             return;
         }
 
         const signUpChannel = await client.channels.fetch(signUpChannelId);
-        const passwordChannel = await client.channels.fetch(passwordChannelId);
+        const privateThread = await client.channels.fetch(privateThreadId);
 
         const { dayRaidCounts } = poll;
         // const defaultRaidSchedule = config.raids.defaultRaidSchedule;
@@ -753,6 +754,8 @@ const pollHelpers = {
             console.error("Invalid or missing bosses array:", bosses);
             return;
         }
+
+        let passwordUpdates = '';
 
         for (const day in dayRaidCounts) {
             const runs = dayRaidCounts[day];
@@ -803,16 +806,32 @@ const pollHelpers = {
                     components: [buttons],
                 });
 
-                // Send password message to the password channel
-                await passwordChannel.send({
-                    content: `🔒 The password for the **${day}** raid is: \`${password}\`.`,
-                });
+                passwordUpdates += `**${day}** - Password: \`${password}\`\n`;
 
                 // Store the sign-up data
                 this.storeSignUpData(sentMessage.id, day, password, poll.pollId);
             } catch (error) {
                 console.error(`Error sending messages for ${day}:`, error);
             }
+        }
+
+        // Send the password updates to the private thread
+        try {
+            if (passwordUpdates) {
+                await privateThread.send({
+                    content: `🔒 **New Raid Passwords for ${config.guilds[guildId].name} - Upcoming Raids**\n${passwordUpdates}`,
+                });
+    
+                // Send an embed notification to the channel that the thread belongs to
+                const updateEmbed = new EmbedBuilder()
+                    .setTitle('🔐 Raid Passwords Updated')
+                    .setDescription(`New raid passwords for **${config.guilds[guildId].name}** have been added. You can find them in the this thread: <#${privateThreadId}>`)
+                    .setColor('Blue');
+    
+                await privateThread.parent.send({ embeds: [updateEmbed] });
+            }
+        } catch (error) {
+            console.error('Error sending passwords to private thread or notifying the channel:', error);
         }
     },
 
