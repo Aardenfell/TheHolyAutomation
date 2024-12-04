@@ -1,5 +1,5 @@
 /**
- * @file Poll Helpers for managing the weekly boss poll process, including poll creation, voting, and result processing.
+ * @file pollHelpers.js
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
@@ -17,6 +17,9 @@ const pollDataPath = path.join(__dirname, '../data/weeklyPolls.json');
 const raidSignUpsPath = path.join(__dirname, '../data/raidSignUps.json');
 const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.json');
 
+const bossesDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_bosses.json`);
+const allocationHistoryDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_allocationHistory.json`);
+
 
 const pollHelpers = {
     /**
@@ -27,6 +30,23 @@ const pollHelpers = {
      */
     startPoll(client, data) {
         const polls = this.loadPollData();
+
+        // Determine which guild the poll is for based on the channel ID
+        let selectedGuild = null;
+        for (const guildKey in config.guilds) {
+            if (config.guilds[guildKey].raidSignUp === data.channelId) {
+                selectedGuild = guildKey;
+                break;
+            }
+        }
+
+        if (!selectedGuild) {
+            console.error('No guild matches the channel ID for starting the poll.');
+            return;
+        }
+
+        // Assign guild to poll data
+        data.guildId = selectedGuild;
 
         // Ensure each boss has required properties
         data.bosses = data.bosses.map((boss, index) => ({
@@ -64,7 +84,7 @@ const pollHelpers = {
 
         // Construct Embed
         const pollEmbed = new EmbedBuilder()
-            .setTitle('🌟 Weekly Boss Poll 🌟')
+            .setTitle(`🌟 Weekly Boss Poll - ${config.guilds[selectedGuild].name} 🌟`)
             .setDescription(
                 `Vote for the bosses to run in this week's raids! 🎯  
                 **Raid Days:** ${raidDays.map(day => `${day} at ${defaultRaidSchedule[day]}`).join(', ')}   
@@ -269,10 +289,11 @@ const pollHelpers = {
             return;
         }
 
-        // Load or initialize allocation history
+        // Load or initialize guild-specific allocation history
         let allocationHistory = {};
+        const guildAllocationPath = allocationHistoryDataPath(guildId);
         try {
-            allocationHistory = JSON.parse(fs.readFileSync(allocationHistoryPath, 'utf8'));
+            allocationHistory = JSON.parse(fs.readFileSync(guildAllocationPath, 'utf8'));
         } catch {
             allocationHistory = { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Wednesday: 0 };
         }
@@ -322,7 +343,7 @@ const pollHelpers = {
         }
 
         // Generate sign-up posts for selected bosses and raid days
-        await this.createSignUpPosts(client, possibleBosses, poll);
+        await this.createSignUpPosts(client, possibleBosses, poll, guildId);
 
         console.log(`Poll ended successfully: ${pollId}`);
     },
