@@ -1,8 +1,9 @@
 /**
  * @file Modal Interaction Handler
+ * @description Handles interaction events for modals, such as new recruit, envoy, and sign-in forms.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const { Events } = require("discord.js");
@@ -24,8 +25,24 @@ module.exports = {
         const customId = interaction.customId;
         console.log('Parsed action from customId:', customId);
 
-        // Explicitly handle guild access modals
-        if (['new_recruit_modal', 'envoy_modal'].includes(customId)) {
+        // Handle dynamic "new_recruit_modal_<guild_key>" modals
+        const newRecruitMatch = customId.match(/^new_recruit_modal_(.+)$/);
+        if (newRecruitMatch) {
+            try {
+                console.log('Handling new recruit modal for guild:', newRecruitMatch[1]);
+                await guildAccessModals.handle(interaction);
+            } catch (err) {
+                console.error('Error executing guild access modal:', err);
+                return await interaction.reply({
+                    content: "There was an issue processing this modal. Please try again.",
+                    ephemeral: true,
+                });
+            }
+            return;
+        }
+
+        // Explicitly handle envoy modals
+        if (customId === 'envoy_modal') {
             try {
                 await guildAccessModals.handle(interaction);
             } catch (err) {

@@ -1,9 +1,9 @@
 /**
- * @file Recruit and Envoy Modal Handler
+ * @file guildAccessModals
  * @description Handles interaction events for the new recruit and envoy modals, updating roles, nicknames, and sending welcome messages.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const { saveGuildData, loadGuildData } = require('../../../utils/guildUtils.js');
@@ -29,10 +29,28 @@ module.exports = {
         const recruitChannel = interaction.guild.channels.cache.get(config.channels.recruitWelcome);
         const envoyChannel = interaction.guild.channels.cache.get(config.channels.envoyWelcome);
 
-        if (customId === 'new_recruit_modal') {
+
+
+        const guildKeyMatch = customId.match(/^new_recruit_modal_(.+)$/);
+        if (guildKeyMatch) {
+            const selectedGuild = guildKeyMatch[1];
+
             // Handle new recruit modal
             const ingameName = interaction.fields.getTextInputValue('ingame_name');
             const referrerNamesRaw = interaction.fields.getTextInputValue('referrer_name') || null;
+
+            const guildInfo = config.guilds[selectedGuild];
+            if (!guildInfo) {
+                return await interaction.reply({
+                    content: 'The selected guild is not valid. Please contact an admin.',
+                    ephemeral: true,
+                });
+            }
+            const guildRole = interaction.guild.roles.cache.get(guildInfo.role_id);
+
+            // Remove existing guild roles
+            const guildRoleIds = Object.values(config.guilds).map(guild => guild.role_id);
+            await member.roles.remove(guildRoleIds);
 
             // Roles to handle
             const restrictorRole = interaction.guild.roles.cache.get(config.roles.restrictor);
@@ -77,6 +95,7 @@ module.exports = {
             if (visitorRole) await member.roles.remove(visitorRole);
             if (initiateRole) await member.roles.add(initiateRole);
             if (envoyRole) await member.roles.remove(envoyRole);
+            if (guildRole) await member.roles.add(guildRole);
 
             // Set nickname
             try {
@@ -100,6 +119,9 @@ module.exports = {
                     referredPeople: [],
                 };
             }
+            
+            // Update guild information for the member
+            guildData[member.id].guild = guildInfo.name;
 
             // Handle referral points if applicable
             if (guildPointsSystemEnabled && referrerNamesRaw) {
@@ -131,7 +153,7 @@ module.exports = {
                     ? ` Referred by: **${referrerNamesRaw}**`
                     : '';
                 await recruitChannel.send(
-                    `🎉 Welcome **${member.user}** to the guild!${referrerInfo}`
+                    `🎉 **${member.user}** has joined ${guildInfo.name}!${referrerInfo}`
                 );
             }
 

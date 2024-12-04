@@ -1,22 +1,104 @@
 /**
- * @file Poll Helpers for managing the weekly boss poll process, including poll creation, voting, and result processing.
+ * @file pollHelpers.js
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
 const path = require('path');
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf-8'));
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const eventEmitter = require('./ngpEvents.js');
 
 
 const pollDataPath = path.join(__dirname, '../data/weeklyPolls.json');
 const raidSignUpsPath = path.join(__dirname, '../data/raidSignUps.json');
-const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.json');
+// const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.json');
 
+const bossesDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_bosses.json`);
+const allocationHistoryDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_allocationHistory.json`);
+
+const defaultBosses = [
+    {
+        "name": "Morokai",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Excavator-9",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Chernobog",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Talus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Malakar",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Cornelius",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Ahzreil",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Kowazan",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Adentus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Junobote",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Grand Aelon",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Nirma",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Aridus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    }
+];
 
 const pollHelpers = {
     /**
@@ -27,6 +109,26 @@ const pollHelpers = {
      */
     startPoll(client, data) {
         const polls = this.loadPollData();
+
+        // Determine which guild the poll is for based on the channel ID
+        let selectedGuild = null;
+        for (const guildKey in config.guilds) {
+            if (config.guilds[guildKey].raidSignUp === data.channelId) {
+                selectedGuild = guildKey;
+                break;
+            }
+        }
+
+        // Debugging: Log selectedGuild to check its value
+        console.log(`Selected guild for poll: ${selectedGuild}`);
+
+        if (!selectedGuild) {
+            console.error('No guild matches the channel ID for starting the poll.');
+            return;
+        }
+
+        // Assign guild to poll data
+        data.guildId = selectedGuild;
 
         // Ensure each boss has required properties
         data.bosses = data.bosses.map((boss, index) => ({
@@ -53,10 +155,8 @@ const pollHelpers = {
             return digits.map(digit => `${digit}️⃣`).join('');
         };
 
-        // Determine raid days to display in the embed
-        // const defaultRaidDays = ["Friday", "Saturday", "Sunday", "Monday", "Wednesday"];
 
-        const defaultRaidSchedule = config.raids.defaultRaidSchedule;
+        const defaultRaidSchedule = config.guilds[selectedGuild].defaultRaidSchedule;
 
         const raidDays = Array.isArray(data.overrideDays) && data.overrideDays.length > 0
             ? data.overrideDays
@@ -64,7 +164,7 @@ const pollHelpers = {
 
         // Construct Embed
         const pollEmbed = new EmbedBuilder()
-            .setTitle('🌟 Weekly Boss Poll 🌟')
+            .setTitle(`🌟 Weekly Boss Poll - ${config.guilds[selectedGuild].name} 🌟`)
             .setDescription(
                 `Vote for the bosses to run in this week's raids! 🎯  
                 **Raid Days:** ${raidDays.map(day => `${day} at ${defaultRaidSchedule[day]}`).join(', ')}   
@@ -103,12 +203,103 @@ const pollHelpers = {
         setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDuration);
     },
 
-
+    /**
+     * @function getButtonStyle
+     * @description Determines the button style based on the boss weight.
+     * @param {number} weight - The weight assigned to a boss.
+     * @returns {ButtonStyle} - The appropriate button style.
+     */
     getButtonStyle(weight) {
         if (weight >= 25) return ButtonStyle.Success; // Green for high-priority bosses
         return ButtonStyle.Primary; // Blue for normal-priority bosses
     },
 
+    /**
+     * @function ensureAllBossesExist
+     * @description Ensures all bosses from the default list are present in the given guild's bosses JSON file.
+     * @param {string} guildId - The guild ID to uniquely identify the data file.
+     */
+    ensureAllBossesExist(guildId) {
+        const filePath = bossesDataPath(guildId);
+        const bossesData = this.loadJsonData(filePath, defaultBosses);
+
+        // Check if each default boss exists in the current bossesData
+        defaultBosses.forEach(defaultBoss => {
+            const bossExists = bossesData.some(boss => boss.name === defaultBoss.name);
+            if (!bossExists) {
+                console.log(`Adding missing boss: ${defaultBoss.name}`);
+                bossesData.push(defaultBoss);
+            }
+        });
+
+        // Save the updated data back to the file if new bosses were added
+        fs.writeFileSync(filePath, JSON.stringify(bossesData, null, 2));
+        console.log("Bosses JSON file updated successfully.");
+    },
+
+    /**
+     * @function loadOrCreateGuildJson
+     * @description Loads a JSON file specific to a guild or creates it if it does not exist.
+     * @param {string} guildId - The guild ID to uniquely identify the data file.
+     * @param {Function} dataPathFunction - Function to generate the file path based on guildId.
+     * @param {Object} defaultValue - Default content to initialize the file with.
+     * @returns {Object} Parsed JSON data from the file.
+     */
+    loadOrCreateGuildJson(guildId, dataPathFunction, defaultValue = {}) {
+        const filePath = dataPathFunction(guildId);
+
+        // Use the defaultBosses array if it's a bosses file
+        if (filePath.includes('_bosses.json')) {
+            defaultValue = defaultBosses;
+        }
+
+        const data = this.loadJsonData(filePath, defaultValue);
+
+        // If the file is a bosses JSON, ensure all default bosses exist
+        if (filePath.includes('_bosses.json')) {
+            this.ensureAllBossesExist(guildId);
+        }
+
+        return data;
+    },
+
+    /**
+     * @function loadJsonData
+     * @description Loads JSON data from a file or initializes it if it does not exist.
+     * @param {string} filePath - The path to the JSON file.
+     * @param {Object} defaultValue - The default value to initialize the file with if it doesn't exist.
+     * @returns {Object} The JSON data.
+     */
+    loadJsonData(filePath, defaultValue = {}) {
+        try {
+            if (!fs.existsSync(filePath)) {
+                fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
+                console.log(`File created: ${filePath}`);
+            }
+            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch (error) {
+            console.error(`Error loading JSON data from ${filePath}:`, error);
+            return defaultValue;
+        }
+    },
+
+    /**
+     * @function loadPollData
+     * @description Loads poll data from the poll data path.
+     * @returns {Array} An array of poll objects.
+     */
+    loadPollData() {
+        return this.loadJsonData(pollDataPath, []);
+    },
+
+    /**
+     * @function savePollData
+     * @description Saves poll data to the poll data path.
+     * @param {Array} data - The poll data to be saved.
+     */
+    savePollData(data) {
+        fs.writeFileSync(pollDataPath, JSON.stringify(data, null, 2));
+    },
 
     /**
      * Handles expiration of active polls and processes their results.
@@ -140,8 +331,15 @@ const pollHelpers = {
      * @param {Array|null} overrideCounts - Optional array of counts to override the default raid counts.
      * @returns {Object} Raid count allocation by day.
      */
-    assignRaidCounts(totalRuns, allocationHistory = {}, overrideDays = null, overrideCounts = null) {
-        const defaultRaidDays = Object.keys(config.raids.defaultRaidSchedule);
+    assignRaidCounts(poll, totalRuns, allocationHistory = {}, overrideDays = null, overrideCounts = null) {
+        // Extract guildId from poll data
+        const guildId = poll.guildId;
+
+        if (!guildId || !config.guilds[guildId]) {
+            throw new Error(`Guild ID ${guildId} not found in the configuration.`);
+        }
+
+        const defaultRaidDays = Object.keys(config.guilds[guildId].defaultRaidSchedule);
         const raidDays = Array.isArray(overrideDays) && overrideDays.length > 0 ? overrideDays : defaultRaidDays;
 
         // Initialize raid counts and ensure allocationHistory keys exist
@@ -214,7 +412,7 @@ const pollHelpers = {
 
         // Step 3: Persist updated allocation history to file
         try {
-            fs.writeFileSync(allocationHistoryPath, JSON.stringify(allocationHistory, null, 2));
+            fs.writeFileSync(allocationHistoryDataPath(guildId), JSON.stringify(allocationHistory, null, 2));
             console.log("Updated allocation history saved successfully.");
         } catch (error) {
             console.error("Error saving allocation history:", error);
@@ -244,6 +442,9 @@ const pollHelpers = {
             return;
         }
 
+        // Get guildId from poll data
+        const guildId = poll.guildId;
+
         // Filter bosses with at least one vote
         const possibleBosses = poll.bosses.filter(boss => boss.votes > 0);
 
@@ -269,17 +470,17 @@ const pollHelpers = {
             return;
         }
 
-        // Load or initialize allocation history
-        let allocationHistory = {};
-        try {
-            allocationHistory = JSON.parse(fs.readFileSync(allocationHistoryPath, 'utf8'));
-        } catch {
-            allocationHistory = { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Wednesday: 0 };
-        }
+        // Load guild-specific allocation history or create it if it doesn't exist
+        const allocationHistory = this.loadOrCreateGuildJson(
+            guildId,
+            allocationHistoryDataPath,
+            { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0 }
+        );
 
         // Calculate raid counts
         const totalRuns = 7
         const dayRaidCounts = this.assignRaidCounts(
+            poll,
             totalRuns,
             allocationHistory,
             poll.overrideDays,
@@ -292,6 +493,10 @@ const pollHelpers = {
         poll.dayRaidCounts = dayRaidCounts;
         poll.active = false; // Mark the poll as inactive
         this.savePollData(polls);
+
+        // Save updated allocation history back to the guild-specific file
+        fs.writeFileSync(allocationHistoryDataPath(guildId), JSON.stringify(allocationHistory, null, 2));
+
 
         // Prepare a summary of possible bosses
         const resultsEmbed = new EmbedBuilder()
@@ -322,7 +527,7 @@ const pollHelpers = {
         }
 
         // Generate sign-up posts for selected bosses and raid days
-        await this.createSignUpPosts(client, possibleBosses, poll);
+        await this.createSignUpPosts(client, possibleBosses, poll, guildId);
 
         console.log(`Poll ended successfully: ${pollId}`);
     },
@@ -347,9 +552,13 @@ const pollHelpers = {
      * @param {Array} bosses - List of bosses from the poll.
      * @param {Array} topBosses - The bosses that won the current poll.
      */
-    adjustBossWeights(bosses, topBosses) {
-        const bossesDataPath = path.join(__dirname, '../data/bosses.json');
-        const bossesData = JSON.parse(fs.readFileSync(bossesDataPath, 'utf8'));
+    adjustBossWeights(bosses, topBosses, guildId) {
+        if (!guildId) {
+            throw new Error('Guild ID is missing in adjustBossWeights function.');
+        }
+
+        const guildBossesDataPath = bossesDataPath(guildId);
+        const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
 
         const scalingFactor = 0.05; // Controls multiplier growth rate
         const baseIncrement = 1;   // Increment for bosses with votes
@@ -381,14 +590,18 @@ const pollHelpers = {
 
         // Save the updated data back to the file
         console.log("Saving updated boss weights...");
-        fs.writeFileSync(bossesDataPath, JSON.stringify(bossesData, null, 2));
+        fs.writeFileSync(guildBossesDataPath, JSON.stringify(bossesData, null, 2));
         console.log("Updated boss weights saved successfully.");
     },
 
 
     matchmakeBoss(poll, raidData) {
-        const bossesPath = path.join(__dirname, '../data/bosses.json');
-        const bossesData = JSON.parse(fs.readFileSync(bossesPath, 'utf8'));
+        const guildId = poll.guildId
+        if (!guildId) {
+            throw new Error('Guild ID is missing from the poll data.')
+        }
+
+        const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
 
         if (!poll || !poll.bosses) {
             console.error('Poll data is missing or malformed:', poll);
@@ -431,7 +644,7 @@ const pollHelpers = {
         if (!selectedBoss) throw new Error('Matchmaking failed: No boss selected.');
 
         // Delegate weight adjustments to `adjustBossWeights`
-        this.adjustBossWeights(poll.bosses, [{ name: selectedBoss.name }]);
+        this.adjustBossWeights(poll.bosses, [{ name: selectedBoss.name }], guildId);
 
         console.log(`Boss selected: ${selectedBoss.name}`);
 
@@ -471,19 +684,19 @@ const pollHelpers = {
 
             console.log(`Vote registered for boss ${boss.name} by user ${userId}`);
 
-            
+
             await interaction.reply({
                 content: `✅ Your vote for **${boss.name}** has been registered!`,
                 ephemeral: true,
             });
         } else {
-            boss.votes = Math.max(0, (boss.votes || 0) -1);
-            boss.voters = boss.voters.filter(voter => voter !==userId);
+            boss.votes = Math.max(0, (boss.votes || 0) - 1);
+            boss.voters = boss.voters.filter(voter => voter !== userId);
             this.savePollData(polls);
 
             console.log(`Vote removed for ${boss.name} by user ${userId}.`);
 
-            
+
             await interaction.reply({
                 content: `❌ Your vote for **${boss.name}** has been removed!`,
                 ephemeral: true,
@@ -506,18 +719,34 @@ const pollHelpers = {
      * @param {Array} bosses - Array of top bosses selected in the poll.
      */
     async createSignUpPosts(client, bosses, poll) {
-        const signUpChannel = await client.channels.fetch(config.channels.raidSignUp); // Main sign-up channel
-        const passwordChannel = await client.channels.fetch(config.channels.raidPassword); // Password announcement channel
+
+        const guildId = poll.guildId;
+
+        if (!guildId || !config.guilds[guildId]) {
+            console.error("Invalid guildId found in poll data or missing guild configuration.");
+            return;
+        }
+
+        const signUpChannelId = config.guilds[guildId].raidSignUp;
+        const passwordChannelId = config.guilds[guildId].raidPassword;
+
+        if (!signUpChannelId || !passwordChannelId) {
+            console.error(`Missing raidSignUp or raidPassword channel in config for guildId: ${guildId}`);
+            return;
+        }
+
+        const signUpChannel = await client.channels.fetch(signUpChannelId);
+        const passwordChannel = await client.channels.fetch(passwordChannelId);
 
         const { dayRaidCounts } = poll;
-        const defaultRaidSchedule = config.raids.defaultRaidSchedule;
+        // const defaultRaidSchedule = config.raids.defaultRaidSchedule;
 
         if (!dayRaidCounts || typeof dayRaidCounts !== 'object') {
             console.error("Invalid or missing dayRaidCounts:", dayRaidCounts);
             return;
         }
 
-        console.log("Creating sign-in posts for raid days:", dayRaidCounts);
+        console.log(`Creating sign-in posts for guild: ${config.guilds[guildId].name}`, dayRaidCounts);
 
         // Validate bosses array
         if (!Array.isArray(bosses) || bosses.length === 0) {
@@ -525,7 +754,7 @@ const pollHelpers = {
             return;
         }
 
-        for (const day of Object.keys(defaultRaidSchedule)) {
+        for (const day in dayRaidCounts) {
             const runs = dayRaidCounts[day];
             if (runs <= 0) {
                 console.log(`Skipping ${day} as it has ${runs} runs.`);
@@ -537,7 +766,7 @@ const pollHelpers = {
 
             // Calculate the Unix timestamp for the specific raid time on the given day
             const raidDate = new Date();
-            const [hours, minutes] = defaultRaidSchedule[day].split(':').map(Number);
+            const [hours, minutes] = config.guilds[guildId].defaultRaidSchedule[day].split(':').map(Number);
             raidDate.setHours(hours, minutes, 0, 0);
 
             // Find the next occurrence of the specified day of the week
@@ -615,7 +844,7 @@ const pollHelpers = {
  * @param {string} password - The password for the sign-in process.
  */
     storeSignUpData(messageId, day, password, pollId) {
-        const signUpData = JSON.parse(fs.readFileSync(raidSignUpsPath, 'utf8')) || [];
+        const signUpData = this.loadJsonData(raidSignUpsPath, []);
 
         // Add new sign-up entry with messageId as the unique identifier
         signUpData.push({

@@ -2,7 +2,7 @@
  * @file ngpHelpers.js
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -187,9 +187,28 @@ async function postEventSummary(client, event) {
         return;
     }
 
+    // Determine the guild involved in the event
+    let guildInvolved = 'None';
+    const participant = event.participants[0];
+    if (participant) {
+        const member = await client.guilds.cache
+            .first() // Assuming only one guild, adjust if there are multiple guilds.
+            .members.fetch(participant.name.replace(/[<@>]/g, ''))
+            .catch(() => null);
+
+        if (member) {
+            for (const [key, guild] of Object.entries(config.guilds)) {
+                if (member.roles.cache.has(guild.role_id)) {
+                    guildInvolved = guild.name;
+                    break;
+                }
+            }
+        }
+    }
+
     const embed = new EmbedBuilder()
         .setTitle(`Expired NGP Event Summary: ${event.item}`)
-        .setDescription(`**Rarity**: ${event.rarity}\n**Event ID**: ${event.event_id}`)
+        .setDescription(`**Rarity**: ${event.rarity}\n**Event ID**: ${event.event_id}\n**Guild Involved**: ${guildInvolved}`)
         .addFields(
             { name: 'Created At', value: `<t:${event.created_at}:f>`, inline: true },
             { name: 'Expired At', value: `<t:${event.expires_at}:f>`, inline: true },
@@ -367,8 +386,20 @@ async function announceWinner(client, event, winner) {
 
         // If the winner's roll type was "Need", include reminder to check the user's build post
         if (winner.roll_type === 'Need') {
+            // Determine guild ID from the winner's roles
+            const guildId = Object.keys(config.guilds).find(guildKey => {
+                return client.guilds.cache.some(guild => {
+                    const member = guild.members.cache.get(winner.name.replace(/[<@>]/g, ''));
+                    return member && member.roles.cache.has(config.guilds[guildKey].role_id);
+                });
+            });
+
+            if (!guildId) {
+                console.error(`Guild not found for the winner's roles.`);
+                return;
+            }
             // Fetch the forum channel and search for the user's post
-            const forumChannelId = config.channels.ngpNeedValidationSubsystemForumID;
+            const forumChannelId = config.guilds[guildId].ngpNeedValidationSubsystemForumID;
             const forumChannel = await client.channels.fetch(forumChannelId);
 
             // Fetch all threads, including archived ones
