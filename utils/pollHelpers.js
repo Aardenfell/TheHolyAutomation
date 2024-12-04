@@ -20,6 +20,86 @@ const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.js
 const bossesDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_bosses.json`);
 const allocationHistoryDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_allocationHistory.json`);
 
+const defaultBosses = [
+    {
+        "name": "Morokai",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Excavator-9",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Chernobog",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Talus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Malakar",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Cornelius",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Ahzreil",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Kowazan",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Adentus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Junobote",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Grand Aelon",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Nirma",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    },
+    {
+        "name": "Aridus",
+        "lastran": "",
+        "totalrancount": 0,
+        "weight": 0
+    }
+];
 
 const pollHelpers = {
     /**
@@ -135,6 +215,29 @@ const pollHelpers = {
     },
 
     /**
+     * @function ensureAllBossesExist
+     * @description Ensures all bosses from the default list are present in the given guild's bosses JSON file.
+     * @param {string} guildId - The guild ID to uniquely identify the data file.
+     */
+    ensureAllBossesExist(guildId) {
+        const filePath = bossesDataPath(guildId);
+        const bossesData = this.loadJsonData(filePath, defaultBosses);
+
+        // Check if each default boss exists in the current bossesData
+        defaultBosses.forEach(defaultBoss => {
+            const bossExists = bossesData.some(boss => boss.name === defaultBoss.name);
+            if (!bossExists) {
+                console.log(`Adding missing boss: ${defaultBoss.name}`);
+                bossesData.push(defaultBoss);
+            }
+        });
+
+        // Save the updated data back to the file if new bosses were added
+        fs.writeFileSync(filePath, JSON.stringify(bossesData, null, 2));
+        console.log("Bosses JSON file updated successfully.");
+    },
+
+    /**
      * @function loadOrCreateGuildJson
      * @description Loads a JSON file specific to a guild or creates it if it does not exist.
      * @param {string} guildId - The guild ID to uniquely identify the data file.
@@ -144,7 +247,20 @@ const pollHelpers = {
      */
     loadOrCreateGuildJson(guildId, dataPathFunction, defaultValue = {}) {
         const filePath = dataPathFunction(guildId);
-        return this.loadJsonData(filePath, defaultValue);
+
+        // Use the defaultBosses array if it's a bosses file
+        if (filePath.includes('_bosses.json')) {
+            defaultValue = defaultBosses;
+        }
+
+        const data = this.loadJsonData(filePath, defaultValue);
+
+        // If the file is a bosses JSON, ensure all default bosses exist
+        if (filePath.includes('_bosses.json')) {
+            this.ensureAllBossesExist(guildId);
+        }
+
+        return data;
     },
 
     /**
