@@ -134,6 +134,18 @@ const pollHelpers = {
         return ButtonStyle.Primary; // Blue for normal-priority bosses
     },
 
+    /**
+     * @function loadOrCreateGuildJson
+     * @description Loads a JSON file specific to a guild or creates it if it does not exist.
+     * @param {string} guildId - The guild ID to uniquely identify the data file.
+     * @param {Function} dataPathFunction - Function to generate the file path based on guildId.
+     * @param {Object} defaultValue - Default content to initialize the file with.
+     * @returns {Object} Parsed JSON data from the file.
+     */
+    loadOrCreateGuildJson(guildId, dataPathFunction, defaultValue = {}) {
+        const filePath = dataPathFunction(guildId);
+        return this.loadJsonData(filePath, defaultValue);
+    },
 
     /**
      * @function loadJsonData
@@ -335,14 +347,12 @@ const pollHelpers = {
             return;
         }
 
-        // Load or initialize guild-specific allocation history
-        let allocationHistory = {};
-        const guildAllocationPath = allocationHistoryDataPath(guildId);
-        try {
-            allocationHistory = JSON.parse(fs.readFileSync(guildAllocationPath, 'utf8'));
-        } catch {
-            allocationHistory = { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Wednesday: 0 };
-        }
+        // Load guild-specific allocation history or create it if it doesn't exist
+        const allocationHistory = this.loadOrCreateGuildJson(
+            guildId,
+            allocationHistoryDataPath,
+            { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Wednesday: 0 }
+        );
 
         // Calculate raid counts
         const totalRuns = 7
@@ -359,6 +369,10 @@ const pollHelpers = {
         poll.dayRaidCounts = dayRaidCounts;
         poll.active = false; // Mark the poll as inactive
         this.savePollData(polls);
+
+        // Save updated allocation history back to the guild-specific file
+        fs.writeFileSync(allocationHistoryDataPath(guildId), JSON.stringify(allocationHistory, null, 2));
+
 
         // Prepare a summary of possible bosses
         const resultsEmbed = new EmbedBuilder()
@@ -415,8 +429,8 @@ const pollHelpers = {
      * @param {Array} topBosses - The bosses that won the current poll.
      */
     adjustBossWeights(bosses, topBosses) {
-        const bossesDataPath = path.join(__dirname, '../data/bosses.json');
-        const bossesData = JSON.parse(fs.readFileSync(bossesDataPath, 'utf8'));
+        const guildBossesDataPath = bossesDataPath(guildId);
+        const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
 
         const scalingFactor = 0.05; // Controls multiplier growth rate
         const baseIncrement = 1;   // Increment for bosses with votes
@@ -448,7 +462,7 @@ const pollHelpers = {
 
         // Save the updated data back to the file
         console.log("Saving updated boss weights...");
-        fs.writeFileSync(bossesDataPath, JSON.stringify(bossesData, null, 2));
+        fs.writeFileSync(guildBossesDataPath, JSON.stringify(bossesData, null, 2));
         console.log("Updated boss weights saved successfully.");
     },
 
@@ -538,19 +552,19 @@ const pollHelpers = {
 
             console.log(`Vote registered for boss ${boss.name} by user ${userId}`);
 
-            
+
             await interaction.reply({
                 content: `✅ Your vote for **${boss.name}** has been registered!`,
                 ephemeral: true,
             });
         } else {
-            boss.votes = Math.max(0, (boss.votes || 0) -1);
-            boss.voters = boss.voters.filter(voter => voter !==userId);
+            boss.votes = Math.max(0, (boss.votes || 0) - 1);
+            boss.voters = boss.voters.filter(voter => voter !== userId);
             this.savePollData(polls);
 
             console.log(`Vote removed for ${boss.name} by user ${userId}.`);
 
-            
+
             await interaction.reply({
                 content: `❌ Your vote for **${boss.name}** has been removed!`,
                 ephemeral: true,
