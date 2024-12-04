@@ -386,8 +386,20 @@ async function announceWinner(client, event, winner) {
 
         // If the winner's roll type was "Need", include reminder to check the user's build post
         if (winner.roll_type === 'Need') {
+            // Determine guild ID from the winner's roles
+            const guildId = Object.keys(config.guilds).find(guildKey => {
+                return client.guilds.cache.some(guild => {
+                    const member = guild.members.cache.get(winner.name.replace(/[<@>]/g, ''));
+                    return member && member.roles.cache.has(config.guilds[guildKey].role_id);
+                });
+            });
+
+            if (!guildId) {
+                console.error(`Guild not found for the winner's roles.`);
+                return;
+            }
             // Fetch the forum channel and search for the user's post
-            const forumChannelId = config.channels.ngpNeedValidationSubsystemForumID;
+            const forumChannelId = config.guilds[guildId].ngpNeedValidationSubsystemForumID;
             const forumChannel = await client.channels.fetch(forumChannelId);
 
             // Fetch all threads, including archived ones
