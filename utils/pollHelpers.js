@@ -307,6 +307,9 @@ const pollHelpers = {
             return;
         }
 
+        // Get guildId from poll data
+        const guildId = poll.guildId;
+
         // Filter bosses with at least one vote
         const possibleBosses = poll.bosses.filter(boss => boss.votes > 0);
 
@@ -570,8 +573,24 @@ const pollHelpers = {
      * @param {Array} bosses - Array of top bosses selected in the poll.
      */
     async createSignUpPosts(client, bosses, poll) {
-        const signUpChannel = await client.channels.fetch(config.channels.raidSignUp); // Main sign-up channel
-        const passwordChannel = await client.channels.fetch(config.channels.raidPassword); // Password announcement channel
+
+        const guildId = poll.guildId;
+
+        if (!guildId || !config.guilds[guildId]) {
+            console.error("Invalid guildId found in poll data or missing guild configuration.");
+            return;
+        }
+
+        const signUpChannelId = config.guilds[guildId].raidSignUp;
+        const passwordChannelId = config.guilds[guildId].raidPassword;
+
+        if (!signUpChannelId || !passwordChannelId) {
+            console.error(`Missing raidSignUp or raidPassword channel in config for guildId: ${guildId}`);
+            return;
+        }
+
+        const signUpChannel = await client.channels.fetch(signUpChannelId);
+        const passwordChannel = await client.channels.fetch(passwordChannelId);
 
         const { dayRaidCounts } = poll;
         const defaultRaidSchedule = config.raids.defaultRaidSchedule;
@@ -581,7 +600,7 @@ const pollHelpers = {
             return;
         }
 
-        console.log("Creating sign-in posts for raid days:", dayRaidCounts);
+        console.log(`Creating sign-in posts for guild: ${config.guilds[guildId].name}`, dayRaidCounts);
 
         // Validate bosses array
         if (!Array.isArray(bosses) || bosses.length === 0) {
@@ -679,7 +698,7 @@ const pollHelpers = {
  * @param {string} password - The password for the sign-in process.
  */
     storeSignUpData(messageId, day, password, pollId) {
-        const signUpData = JSON.parse(fs.readFileSync(raidSignUpsPath, 'utf8')) || [];
+        const signUpData = this.loadJsonData(raidSignUpsPath, []);
 
         // Add new sign-up entry with messageId as the unique identifier
         signUpData.push({
