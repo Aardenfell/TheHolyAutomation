@@ -3,19 +3,18 @@
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
 const path = require('path');
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf-8'));
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const eventEmitter = require('./ngpEvents.js');
 
 
 const pollDataPath = path.join(__dirname, '../data/weeklyPolls.json');
 const raidSignUpsPath = path.join(__dirname, '../data/raidSignUps.json');
-const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.json');
+// const allocationHistoryPath = path.join(__dirname, '../data/allocationHistory.json');
 
 const bossesDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_bosses.json`);
 const allocationHistoryDataPath = (guildId) => path.join(__dirname, `../data/${guildId}_allocationHistory.json`);
@@ -120,6 +119,9 @@ const pollHelpers = {
             }
         }
 
+        // Debugging: Log selectedGuild to check its value
+        console.log(`Selected guild for poll: ${selectedGuild}`);
+
         if (!selectedGuild) {
             console.error('No guild matches the channel ID for starting the poll.');
             return;
@@ -153,10 +155,8 @@ const pollHelpers = {
             return digits.map(digit => `${digit}️⃣`).join('');
         };
 
-        // Determine raid days to display in the embed
-        // const defaultRaidDays = ["Friday", "Saturday", "Sunday", "Monday", "Wednesday"];
 
-        const defaultRaidSchedule = config.raids.defaultRaidSchedule;
+        const defaultRaidSchedule = config.guilds[selectedGuild].defaultRaidSchedule;
 
         const raidDays = Array.isArray(data.overrideDays) && data.overrideDays.length > 0
             ? data.overrideDays
@@ -331,8 +331,15 @@ const pollHelpers = {
      * @param {Array|null} overrideCounts - Optional array of counts to override the default raid counts.
      * @returns {Object} Raid count allocation by day.
      */
-    assignRaidCounts(totalRuns, allocationHistory = {}, overrideDays = null, overrideCounts = null) {
-        const defaultRaidDays = Object.keys(config.raids.defaultRaidSchedule);
+    assignRaidCounts(poll, totalRuns, allocationHistory = {}, overrideDays = null, overrideCounts = null) {
+        // Extract guildId from poll data
+        const guildId = poll.guildId;
+
+        if (!guildId || !config.guilds[guildId]) {
+            throw new Error(`Guild ID ${guildId} not found in the configuration.`);
+        }
+
+        const defaultRaidDays = Object.keys(config.guilds[guildId].defaultRaidSchedule);
         const raidDays = Array.isArray(overrideDays) && overrideDays.length > 0 ? overrideDays : defaultRaidDays;
 
         // Initialize raid counts and ensure allocationHistory keys exist
@@ -405,7 +412,7 @@ const pollHelpers = {
 
         // Step 3: Persist updated allocation history to file
         try {
-            fs.writeFileSync(allocationHistoryPath, JSON.stringify(allocationHistory, null, 2));
+            fs.writeFileSync(allocationHistoryDataPath(guildId), JSON.stringify(allocationHistory, null, 2));
             console.log("Updated allocation history saved successfully.");
         } catch (error) {
             console.error("Error saving allocation history:", error);
@@ -467,12 +474,13 @@ const pollHelpers = {
         const allocationHistory = this.loadOrCreateGuildJson(
             guildId,
             allocationHistoryDataPath,
-            { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Wednesday: 0 }
+            { Friday: 0, Saturday: 0, Sunday: 0, Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0 }
         );
 
         // Calculate raid counts
         const totalRuns = 7
         const dayRaidCounts = this.assignRaidCounts(
+            poll,
             totalRuns,
             allocationHistory,
             poll.overrideDays,
@@ -589,7 +597,7 @@ const pollHelpers = {
 
     matchmakeBoss(poll, raidData) {
         const guildId = poll.guildId
-        if(!guildId) {
+        if (!guildId) {
             throw new Error('Guild ID is missing from the poll data.')
         }
 
@@ -731,7 +739,7 @@ const pollHelpers = {
         const passwordChannel = await client.channels.fetch(passwordChannelId);
 
         const { dayRaidCounts } = poll;
-        const defaultRaidSchedule = config.raids.defaultRaidSchedule;
+        // const defaultRaidSchedule = config.raids.defaultRaidSchedule;
 
         if (!dayRaidCounts || typeof dayRaidCounts !== 'object') {
             console.error("Invalid or missing dayRaidCounts:", dayRaidCounts);
@@ -746,7 +754,7 @@ const pollHelpers = {
             return;
         }
 
-        for (const day of Object.keys(defaultRaidSchedule)) {
+        for (const day in dayRaidCounts) {
             const runs = dayRaidCounts[day];
             if (runs <= 0) {
                 console.log(`Skipping ${day} as it has ${runs} runs.`);
@@ -758,7 +766,7 @@ const pollHelpers = {
 
             // Calculate the Unix timestamp for the specific raid time on the given day
             const raidDate = new Date();
-            const [hours, minutes] = defaultRaidSchedule[day].split(':').map(Number);
+            const [hours, minutes] = config.guilds[guildId].defaultRaidSchedule[day].split(':').map(Number);
             raidDate.setHours(hours, minutes, 0, 0);
 
             // Find the next occurrence of the specified day of the week
