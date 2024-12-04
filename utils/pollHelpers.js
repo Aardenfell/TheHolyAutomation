@@ -123,12 +123,55 @@ const pollHelpers = {
         setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDuration);
     },
 
-
+    /**
+     * @function getButtonStyle
+     * @description Determines the button style based on the boss weight.
+     * @param {number} weight - The weight assigned to a boss.
+     * @returns {ButtonStyle} - The appropriate button style.
+     */
     getButtonStyle(weight) {
         if (weight >= 25) return ButtonStyle.Success; // Green for high-priority bosses
         return ButtonStyle.Primary; // Blue for normal-priority bosses
     },
 
+
+    /**
+     * @function loadJsonData
+     * @description Loads JSON data from a file or initializes it if it does not exist.
+     * @param {string} filePath - The path to the JSON file.
+     * @param {Object} defaultValue - The default value to initialize the file with if it doesn't exist.
+     * @returns {Object} The JSON data.
+     */
+    loadJsonData(filePath, defaultValue = {}) {
+        try {
+            if (!fs.existsSync(filePath)) {
+                fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
+                console.log(`File created: ${filePath}`);
+            }
+            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch (error) {
+            console.error(`Error loading JSON data from ${filePath}:`, error);
+            return defaultValue;
+        }
+    },
+
+    /**
+     * @function loadPollData
+     * @description Loads poll data from the poll data path.
+     * @returns {Array} An array of poll objects.
+     */
+    loadPollData() {
+        return this.loadJsonData(pollDataPath, []);
+    },
+
+    /**
+     * @function savePollData
+     * @description Saves poll data to the poll data path.
+     * @param {Array} data - The poll data to be saved.
+     */
+    savePollData(data) {
+        fs.writeFileSync(pollDataPath, JSON.stringify(data, null, 2));
+    },
 
     /**
      * Handles expiration of active polls and processes their results.
