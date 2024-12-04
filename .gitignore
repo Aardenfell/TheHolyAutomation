@@ -132,3 +132,5 @@ data/bup.json
 data/bosses.json
 data/allocationHistory.json
 data/guild2_allocationHistory.json
+data/guild2_bosses.json
+data/undefined_bosses.json

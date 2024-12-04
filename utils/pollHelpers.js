@@ -428,7 +428,11 @@ const pollHelpers = {
      * @param {Array} bosses - List of bosses from the poll.
      * @param {Array} topBosses - The bosses that won the current poll.
      */
-    adjustBossWeights(bosses, topBosses) {
+    adjustBossWeights(bosses, topBosses, guildId) {
+        if (!guildId) {
+            throw new Error('Guild ID is missing in adjustBossWeights function.');
+        }
+
         const guildBossesDataPath = bossesDataPath(guildId);
         const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
 
@@ -468,8 +472,12 @@ const pollHelpers = {
 
 
     matchmakeBoss(poll, raidData) {
-        const bossesPath = path.join(__dirname, '../data/bosses.json');
-        const bossesData = JSON.parse(fs.readFileSync(bossesPath, 'utf8'));
+        const guildId = poll.guildId
+        if(!guildId) {
+            throw new Error('Guild ID is missing from the poll data.')
+        }
+
+        const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
 
         if (!poll || !poll.bosses) {
             console.error('Poll data is missing or malformed:', poll);
@@ -512,7 +520,7 @@ const pollHelpers = {
         if (!selectedBoss) throw new Error('Matchmaking failed: No boss selected.');
 
         // Delegate weight adjustments to `adjustBossWeights`
-        this.adjustBossWeights(poll.bosses, [{ name: selectedBoss.name }]);
+        this.adjustBossWeights(poll.bosses, [{ name: selectedBoss.name }], guildId);
 
         console.log(`Boss selected: ${selectedBoss.name}`);
 
