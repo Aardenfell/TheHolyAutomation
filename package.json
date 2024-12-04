@@ -1,6 +1,6 @@
 {
 	"name": "the-holy-automation",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "A powerful Discord bot for managing The Holy Lands guild, featuring NGP systems, raid management, voice hubs, and more.",
 	"main": "bot.js",
 	"scripts": {
