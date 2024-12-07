@@ -1,28 +1,54 @@
 /**
- * @file NGP Help Command
+ * @file ngpHelpButton.js
  * @description Sends detailed help information about the NGP system to the user who requests it.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.2.0
  */
 
-// Module export for the NGP help command
-module.exports = {
-  id: 'ngp_help',
+// Required modules
+const config = require('../../../config.json');
 
-  /**
-   * @function execute
-   * @description Executes the NGP help command, sending a help message to the user.
-   * @param {object} interaction - The interaction object representing the user's request.
-   */
-  async execute(interaction) {
-      const helpMessage = `
-**NGP System Help:**
+module.exports = {
+    id: 'ngp_help',
+
+    /**
+     * @function execute
+     * @description Executes the NGP help command, sending a help message to the user.
+     * @param {object} interaction - The interaction object representing the user's request.
+     */
+    async execute(interaction) {
+        try {
+            // Get the user's roles
+            const memberRoles = interaction.member.roles.cache;
+
+            // Determine the guild based on the user's role
+            let guildId = null;
+            for (const [key, guildConfig] of Object.entries(config.guilds)) {
+                if (memberRoles.has(guildConfig.role_id)) {
+                    guildId = key;
+                    break;
+                }
+            }
+
+            // If the user doesn't belong to any configured guild
+            if (!guildId) {
+                return await interaction.reply({
+                    content: 'You do not belong to a recognized guild for the NGP system.',
+                    ephemeral: true,
+                });
+            }
+
+            // Get the specific forum channel ID for the guild
+            const forumChannelId = config.guilds[guildId].ngpNeedValidationSubsystemForumID;
+
+            // Construct the help message with the correct channel
+            const helpMessage = `
+**NGP System Help (Guild: ${config.guilds[guildId].name}):**
 
 - **Need**:
 - The 'Need' button will not appear for blue/rare items.
-- A valid build post is required to roll Need. Post your build here: <#1305389518161055764>.
-- The build must already exist in <#1301552024818810942>.
+- A valid build post is required to roll Need. Post your build here: <#${forumChannelId}>.
 - Use 'Need' only if the item is required for your active build. **Needs are not for unlocking traits.** If you want an item for trait unlocking, use 'Greed' instead.
 
 - **Greed**:
@@ -31,7 +57,7 @@ module.exports = {
 - **Pass**:
 - Click 'Pass' if you do not want the item.
 
-- **Selling**
+- **Selling**:
 - Sell decisions must be unanimous. Profits will be evenly split amongst participants.
 
 **How It Works:**
@@ -45,18 +71,17 @@ module.exports = {
 **Note**: More info can be found in <#1295184289607974934>
 `;
 
-      try {
-          // Send an ephemeral message with the updated help info
-          await interaction.reply({
-              content: helpMessage,
-              ephemeral: true, // Only visible to the user who clicked the button
-          });
-      } catch (error) {
-          console.error('Error sending help message:', error);
-          await interaction.reply({
-              content: 'Failed to display help info. Please try again.',
-              ephemeral: true,
-          });
-      }
-  },
+            // Send an ephemeral message with the updated help info
+            await interaction.reply({
+                content: helpMessage,
+                ephemeral: true, // Only visible to the user who clicked the button
+            });
+        } catch (error) {
+            console.error('Error sending help message:', error);
+            await interaction.reply({
+                content: 'Failed to display help info. Please try again.',
+                ephemeral: true,
+            });
+        }
+    },
 };
