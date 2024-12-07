@@ -130,6 +130,10 @@ const pollHelpers = {
         // Assign guild to poll data
         data.guildId = selectedGuild;
 
+        // Calculate expiration time and save it to the poll data
+        const expirationUnix = Math.floor(Date.now() / 1000) + data.duration * 3600;
+        data.expiration = expirationUnix; // Save expiration time in Unix format
+
         // Ensure each boss has required properties
         data.bosses = data.bosses.map((boss, index) => ({
             name: boss.name,
@@ -147,8 +151,6 @@ const pollHelpers = {
         polls.push(data);
         this.savePollData(polls);
 
-        const expirationDuration = data.debug ? 60 * 1000 : data.duration * 3600 * 1000;
-        const pollExpirationUnix = Math.floor(Date.now() / 1000) + data.duration * 3600;
 
         const emojiMap = index => {
             const digits = index.toString().split('');
@@ -168,7 +170,7 @@ const pollHelpers = {
             .setDescription(
                 `Vote for the bosses to run in this week's raids! 🎯  
                 **Raid Days:** ${raidDays.map(day => `${day} at ${defaultRaidSchedule[day]}`).join(', ')}   
-                **Poll Ends:** <t:${pollExpirationUnix}:R>\n\n` +
+                **Poll Ends:** <t:${expirationUnix}:R>\n\n` +
                 data.bosses.map(boss => `${emojiMap(boss.index)} ${boss.name}`).join('\n') // Use emojiMap for indices
             )
             .setColor('Random');
@@ -200,7 +202,8 @@ const pollHelpers = {
         });
 
         // Schedule expiration
-        setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDuration);
+        const expirationDurationMs = (expirationUnix - Math.floor(Date.now() / 1000)) * 1000;
+        setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDurationMs);
     },
 
     /**
@@ -309,18 +312,28 @@ const pollHelpers = {
     async handlePollExpiration(client, currentTime) {
         const polls = this.loadPollData();
 
-        // Find polls that are active and expired
-        const expiredPolls = polls.filter(poll => poll.active && poll.expiration <= currentTime);
+        for (const poll of polls) {
+            // Skip inactive polls
+            if (!poll.active) continue;
 
-        for (const poll of expiredPolls) {
-            console.log(`Poll expired: ${poll.pollId}`);
-            await this.endPoll(client, poll.pollId, poll.channelId, poll.debug);
-            poll.active = false; // Mark the poll as inactive
+            const timeUntilExpiration = poll.expiration - currentTime;
+
+            if (timeUntilExpiration <= 0) {
+                // Poll has already expired, handle it immediately
+                console.log(`Poll expired (missed expiration): ${poll.pollId}`);
+                await this.endPoll(client, poll.pollId, poll.channelId, poll.debug);
+                poll.active = false; // Mark the poll as inactive
+            } else {
+                // Poll is still active, schedule its expiration
+                console.log(`Scheduling expiration for poll ${poll.pollId} in ${timeUntilExpiration} seconds`);
+                setTimeout(() => this.endPoll(client, poll.pollId, poll.channelId, poll.debug), timeUntilExpiration * 1000);
+            }
         }
 
         // Save updated poll data
         this.savePollData(polls);
     },
+
 
     /**
      * @function assignRaidCounts
@@ -821,13 +834,13 @@ const pollHelpers = {
                 await privateThread.send({
                     content: `🔒 **New Raid Passwords for ${config.guilds[guildId].name} - Upcoming Raids**\n${passwordUpdates}`,
                 });
-    
+
                 // Send an embed notification to the channel that the thread belongs to
                 const updateEmbed = new EmbedBuilder()
                     .setTitle('🔐 Raid Passwords Updated')
                     .setDescription(`New raid passwords for **${config.guilds[guildId].name}** have been added. You can find them in the this thread: <#${privateThreadId}>`)
                     .setColor('Blue');
-    
+
                 await privateThread.parent.send({ embeds: [updateEmbed] });
             }
         } catch (error) {
