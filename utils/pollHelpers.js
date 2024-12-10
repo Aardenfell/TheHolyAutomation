@@ -3,7 +3,7 @@
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.2.0
  */
 
 const fs = require('fs');
@@ -110,6 +110,12 @@ const pollHelpers = {
     startPoll(client, data) {
         const polls = this.loadPollData();
 
+        // Ensure no duplicate timers for the same poll
+        if (polls.some(poll => poll.pollId === data.pollId && poll.active)) {
+            console.log(`Poll with ID ${data.pollId} is already active. Skipping.`);
+            return;
+        }
+
         // Determine which guild the poll is for based on the channel ID
         let selectedGuild = null;
         for (const guildKey in config.guilds) {
@@ -130,6 +136,10 @@ const pollHelpers = {
         // Assign guild to poll data
         data.guildId = selectedGuild;
 
+        // Calculate expiration time and save it to the poll data
+        const expirationUnix = Math.floor(Date.now() / 1000) + data.duration * 3600;
+        data.expiration = expirationUnix; // Save expiration time in Unix format
+
         // Ensure each boss has required properties
         data.bosses = data.bosses.map((boss, index) => ({
             name: boss.name,
@@ -147,8 +157,6 @@ const pollHelpers = {
         polls.push(data);
         this.savePollData(polls);
 
-        const expirationDuration = data.debug ? 60 * 1000 : data.duration * 3600 * 1000;
-        const pollExpirationUnix = Math.floor(Date.now() / 1000) + data.duration * 3600;
 
         const emojiMap = index => {
             const digits = index.toString().split('');
@@ -168,7 +176,7 @@ const pollHelpers = {
             .setDescription(
                 `Vote for the bosses to run in this week's raids! 🎯  
                 **Raid Days:** ${raidDays.map(day => `${day} at ${defaultRaidSchedule[day]}`).join(', ')}   
-                **Poll Ends:** <t:${pollExpirationUnix}:R>\n\n` +
+                **Poll Ends:** <t:${expirationUnix}:R>\n\n` +
                 data.bosses.map(boss => `${emojiMap(boss.index)} ${boss.name}`).join('\n') // Use emojiMap for indices
             )
             .setColor('Random');
@@ -200,7 +208,8 @@ const pollHelpers = {
         });
 
         // Schedule expiration
-        setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDuration);
+        const expirationDurationMs = (expirationUnix - Math.floor(Date.now() / 1000)) * 1000;
+        setTimeout(() => this.endPoll(client, data.pollId, data.channelId, data.debug), expirationDurationMs);
     },
 
     /**
@@ -284,24 +293,6 @@ const pollHelpers = {
     },
 
     /**
-     * @function loadPollData
-     * @description Loads poll data from the poll data path.
-     * @returns {Array} An array of poll objects.
-     */
-    loadPollData() {
-        return this.loadJsonData(pollDataPath, []);
-    },
-
-    /**
-     * @function savePollData
-     * @description Saves poll data to the poll data path.
-     * @param {Array} data - The poll data to be saved.
-     */
-    savePollData(data) {
-        fs.writeFileSync(pollDataPath, JSON.stringify(data, null, 2));
-    },
-
-    /**
      * Handles expiration of active polls and processes their results.
      * @param {Client} client - The Discord client object.
      * @param {number} currentTime - The current time in Unix seconds.
@@ -309,17 +300,24 @@ const pollHelpers = {
     async handlePollExpiration(client, currentTime) {
         const polls = this.loadPollData();
 
-        // Find polls that are active and expired
-        const expiredPolls = polls.filter(poll => poll.active && poll.expiration <= currentTime);
+        for (const poll of polls) {
+            if (!poll.active) continue;
 
-        for (const poll of expiredPolls) {
-            console.log(`Poll expired: ${poll.pollId}`);
-            await this.endPoll(client, poll.pollId, poll.channelId, poll.debug);
-            poll.active = false; // Mark the poll as inactive
+            const timeUntilExpiration = poll.expiration - currentTime;
+
+            if (timeUntilExpiration <= 0) {
+                console.log(`Poll expired: ${poll.pollId}`);
+
+                // Mark poll as inactive immediately to prevent re-processing
+                // poll.active = false;
+                // this.savePollData(polls); // Persist state before calling endPoll
+
+                // Process expiration
+                await this.endPoll(client, poll.pollId, poll.channelId, poll.debug);
+            }
         }
 
-        // Save updated poll data
-        this.savePollData(polls);
+        // console.log("handlePollExpiration completed.");
     },
 
     /**
@@ -421,7 +419,9 @@ const pollHelpers = {
         // Log and return results
         console.log("Final raid counts:", dayRaidCounts);
         console.log("Updated allocation history:", allocationHistory);
+        console.log("Returning dayRaidCounts:", JSON.stringify(dayRaidCounts, null, 2));
         return dayRaidCounts;
+
     },
 
 
@@ -489,10 +489,20 @@ const pollHelpers = {
 
         console.log("Assigned raid counts for poll:", dayRaidCounts);
 
-        // Assign dayRaidCounts to the poll
-        poll.dayRaidCounts = dayRaidCounts;
-        poll.active = false; // Mark the poll as inactive
+        // Assign dayRaidCounts to the poll object
+        poll.dayRaidCounts = dayRaidCounts || {}; // Ensure dayRaidCounts is always assigned
+        console.log("Poll with dayRaidCounts before saving:", JSON.stringify(poll, null, 2));
+
+
+        console.log("Poll after modifications:", JSON.stringify(poll, null, 2));
+        poll.active = false;
+
+        // Save updated poll data
         this.savePollData(polls);
+
+        // Log saved polls to confirm
+        const savedPolls = this.loadPollData();
+        console.log("Poll data after saving:", JSON.stringify(savedPolls, null, 2));
 
         // Save updated allocation history back to the guild-specific file
         fs.writeFileSync(allocationHistoryDataPath(guildId), JSON.stringify(allocationHistory, null, 2));
@@ -528,8 +538,10 @@ const pollHelpers = {
 
         // Generate sign-up posts for selected bosses and raid days
         await this.createSignUpPosts(client, possibleBosses, poll, guildId);
+        // console.log("Polls array after createSignUp:", JSON.stringify(polls, null, 2));
 
         console.log(`Poll ended successfully: ${pollId}`);
+        // console.log("Polls array after ending successfully:", JSON.stringify(polls, null, 2));
     },
 
 
@@ -650,8 +662,50 @@ const pollHelpers = {
 
         return selectedBoss.name;
     },
+    // /**
+    //  * @function handleOverride
+    //  * @description Handles the override logic for raid runs, allowing manual boss selection or using the matchmaker.
+    //  * @param {Object} poll - The poll object containing data for the raid.
+    //  * @param {Object} overrideSelections - An array of boss names or "matchmake" for each run.
+    //  * @param {Object} dayData - The data for the specific raid day.
+    //  */
+    // handleOverride(poll, overrideSelections, dayData) {
+    //     const guildId = poll.guildId;
 
+    //     if (!guildId || !poll || !overrideSelections || !dayData) {
+    //         throw new Error('Invalid data for override handling.');
+    //     }
 
+    //     const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
+
+    //     // Loop through each run and handle overrides
+    //     const selectedBosses = [];
+    //     overrideSelections.forEach((selection, index) => {
+    //         if (selection === 'matchmake') {
+    //             try {
+    //                 const matchedBoss = this.matchmakeBoss(poll, dayData);
+    //                 selectedBosses.push(matchedBoss);
+    //             } catch (error) {
+    //                 console.error(`Matchmaker failed for run ${index + 1}:`, error);
+    //                 selectedBosses.push(null); // Placeholder if matchmaking fails
+    //             }
+    //         } else {
+    //             const bossExists = bossesData.some(boss => boss.name === selection);
+    //             if (bossExists) {
+    //                 selectedBosses.push(selection);
+    //             } else {
+    //                 console.warn(`Invalid boss selected for run ${index + 1}: ${selection}`);
+    //                 selectedBosses.push(null); // Placeholder for invalid selection
+    //             }
+    //         }
+    //     });
+
+    //     // Save the selections back to dayData
+    //     dayData.selectedBosses = selectedBosses.filter(boss => boss !== null); // Remove invalid placeholders
+    //     this.saveSignUpData(dayData);
+
+    //     return selectedBosses;
+    // },
 
 
     /**
@@ -795,6 +849,7 @@ const pollHelpers = {
                 new ButtonBuilder().setCustomId(`signUp_${day}`).setLabel('🔔').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId(`signIn_${day}`).setLabel('Sign In').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId(`lock_${day}`).setLabel('Lock').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId(`override_${day}`).setLabel('Override').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`close_${day}`).setLabel('Close').setStyle(ButtonStyle.Secondary)
             );
 
@@ -821,18 +876,21 @@ const pollHelpers = {
                 await privateThread.send({
                     content: `🔒 **New Raid Passwords for ${config.guilds[guildId].name} - Upcoming Raids**\n${passwordUpdates}`,
                 });
-    
+
                 // Send an embed notification to the channel that the thread belongs to
                 const updateEmbed = new EmbedBuilder()
                     .setTitle('🔐 Raid Passwords Updated')
                     .setDescription(`New raid passwords for **${config.guilds[guildId].name}** have been added. You can find them in the this thread: <#${privateThreadId}>`)
                     .setColor('Blue');
-    
+
                 await privateThread.parent.send({ embeds: [updateEmbed] });
             }
         } catch (error) {
             console.error('Error sending passwords to private thread or notifying the channel:', error);
         }
+
+        console.log("dayRaidCounts within createSignUpPosts:", dayRaidCounts);
+        console.log("EndPoll - Poll Before Saving in createSignUpPosts:", JSON.stringify(poll, null, 2));
     },
 
 
@@ -875,18 +933,24 @@ const pollHelpers = {
             signedIn: [],
             locked: false,
             closed: false,
+            overridden: false,
         });
 
         // Save updated data
         fs.writeFileSync(raidSignUpsPath, JSON.stringify(signUpData, null, 2));
-    }
-    ,
+    },
 
+
+    /**
+     * @function loadPollData
+     * @description Loads poll data from the poll data path.
+     * @returns {Array} An array of poll objects.
+     */
     // Utility methods to load and save poll data
     loadPollData() {
         try {
             const data = JSON.parse(fs.readFileSync(pollDataPath, 'utf8')) || [];
-            // Filter out any null values from the loaded data
+            // console.log("Loaded poll data:", JSON.stringify(data, null, 2));
             return data.filter(poll => poll !== null);
         } catch (error) {
             console.error("Error loading poll data:", error);
@@ -894,11 +958,22 @@ const pollHelpers = {
         }
     },
 
-
+    /**
+     * @function savePollData
+     * @description Saves poll data to the poll data path.
+     * @param {Array} data - The poll data to be saved.
+     */
     savePollData(data) {
-        fs.writeFileSync(pollDataPath, JSON.stringify(data, null, 2));
-    },
-};
+        const clonedData = JSON.parse(JSON.stringify(data)); // Deep clone the data
+        // console.log("Data to be saved:", JSON.stringify(clonedData, null, 2));
+        try {
+            fs.writeFileSync(pollDataPath, JSON.stringify(clonedData, null, 2));
+            // console.log("Poll data written successfully.");
+        } catch (error) {
+            console.error("Error saving poll data:", error);
+        }
+    }
+}
 
 pollHelpers.handlePollExpiration = pollHelpers.handlePollExpiration.bind(pollHelpers);
 

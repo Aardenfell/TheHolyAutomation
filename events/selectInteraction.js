@@ -1,48 +1,58 @@
 /**
- * @file Select Menu Interaction Handler
+ * @file selectMenuInteraction.js
+ * @description Handles select menu interactions for various commands and features in the Discord bot.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.2.0
  */
 
 const { Events } = require("discord.js");
 
 module.exports = {
-	name: Events.InteractionCreate,
+    name: Events.InteractionCreate,
 
-	/**
-	 * @description Executes when an interaction is created and handle it.
-	 * @author Aardenfell
-	 * @param {import('discord.js').SelectMenuInteraction & { client: import('../typings').Client }} interaction The interaction which was created
-	 */
+    /**
+     * @function execute
+     * @description Execute function to handle select menu interactions.
+     * @param {object} interaction - The interaction object from Discord.
+     */
+    async execute(interaction) {
+        const { client } = interaction;
 
-	async execute(interaction) {
-		// Deconstructed client from interaction object.
-		const { client } = interaction;
+        // Only handle select menu interactions
+        if (!interaction.isStringSelectMenu()) return;
 
-		// Checks if the interaction is a select menu interaction (to prevent weird bugs)
+        const customId = interaction.customId;
+        console.log("Parsed action from customId:", customId);
 
-		if (!interaction.isStringSelectMenu()) return;
+        /**********************************************************************/
+        // Match Regex-Based Select Commands (Special Cases)
 
-		const command = client.selectCommands.get(interaction.customId);
+        const matchingHandler = client.selectCommands.find(handler => {
+            if (typeof handler.id === "string") {
+                return handler.id === customId;
+            } else if (handler.id instanceof RegExp) {
+                return handler.id.test(customId);
+            }
+            return false;
+        });
 
-		// If the interaction is not a command in cache, return error message.
-		// You can modify the error message at ./messages/defaultSelectError.js file!
+        if (matchingHandler) {
+            try {
+                return await matchingHandler.execute(interaction);
+            } catch (err) {
+                console.error("Error executing select menu handler:", err);
+                return await interaction.reply({
+                    content: "There was an issue processing your selection. Please try again.",
+                    ephemeral: true,
+                });
+            }
+        }
 
-		if (!command) {
-			return await require("../messages/defaultSelectError").execute(interaction);
-		}
+        /**********************************************************************/
+        // Default Response for Unhandled Select Menus
 
-		// A try to execute the interaction.
-
-		try {
-			await command.execute(interaction);
-		} catch (err) {
-			console.error(err);
-			await interaction.reply({
-				content: "There was an issue while executing that select menu option!",
-				ephemeral: true,
-			});
-		}
-	},
+        console.error("No handler found for select menu:", customId);
+        return await require("../messages/defaultSelectError").execute(interaction);
+    },
 };
