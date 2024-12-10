@@ -172,53 +172,84 @@ module.exports = {
                 await interaction.showModal(modal);
                 break;
 
-            case 'lock':
-                if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
-                    return sendErrorReply(interaction, 'You do not have permission to lock/unlock raids.');
-                }
-
-                const poll = pollHelpers.loadPollData().find(p => p.pollId === dayData.pollId);
-                if (!poll) return sendErrorReply(interaction, 'Poll data not found for this raid.');
-
-                const runs = poll.dayRaidCounts?.[raidDay] || 1;
-                const selectedBosses = [];
-
-                for (let i = 0; i < runs; i++) {
-                    try {
-                        const selectedBoss = pollHelpers.matchmakeBoss(poll, dayData);
-                        selectedBosses.push(selectedBoss);
-                    } catch (error) {
-                        console.error('Error in matchmaking:', error);
-                        return sendErrorReply(interaction, 'No eligible bosses found based on attendance.');
+                case 'lock':
+                    if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
+                        return sendErrorReply(interaction, 'You do not have permission to lock/unlock raids.');
                     }
-                }
-
-                dayData.locked = true;
-                dayData.selectedBosses = selectedBosses;
-                saveSignUpData(signUpData);
-
-                const lockEmbed = new EmbedBuilder()
-                    .setTitle(`🔒 Locked Raid | Bosses: ${selectedBosses.join(', ')}`)
-                    .setDescription(
-                        `**Raid Day:** ${raidDay}\n` +
-                        `**Number of Runs:** ${runs}\n` +
-                        `**Selected Bosses:** ${selectedBosses.join(', ')}\n` +
-                        `**Sign-Up Status:** Locked`
-                    )
-                    .setColor('Red');
-
-                await interaction.message.edit({ embeds: [lockEmbed] });
-
-                const lockThread = await getOrCreateThread(interaction, threadName);
-                if (lockThread) {
-                    await lockThread.send({
-                        content: `@everyone The raid has been locked! The selected bosses are **${selectedBosses.join(', ')}**.`,
-                        allowedMentions: { parse: ['everyone'] },
-                    });
-                }
-
-                await interaction.reply({ content: `✅ Raid locked with bosses: **${selectedBosses.join(', ')}**.`, ephemeral: true });
-                break;
+                
+                    // Load the poll data
+                    const poll = pollHelpers.loadPollData().find(p => p.pollId === dayData.pollId);
+                    if (!poll) return sendErrorReply(interaction, 'Poll data not found for this raid.');
+                
+                    if (dayData.locked) {
+                        // Unlock the raid
+                        dayData.locked = false;
+                        saveSignUpData(signUpData);
+                
+                        const unlockEmbed = new EmbedBuilder()
+                            .setTitle(`🔓 Raid Unlocked | ${raidDay}`)
+                            .setDescription(
+                                `**Raid Day:** ${raidDay}\n` +
+                                `**Number of Runs:** ${poll.dayRaidCounts?.[raidDay] || 1}\n` +
+                                `**Selected Bosses:** ${dayData.selectedBosses?.join(', ') || 'None'}\n` +
+                                `**Sign-Up Status:** Unlocked`
+                            )
+                            .setColor('Green');
+                
+                        await interaction.message.edit({ embeds: [unlockEmbed] });
+                
+                        const unlockThread = await getOrCreateThread(interaction, threadName);
+                        if (unlockThread) {
+                            await unlockThread.send({
+                                content: `Sign-ups for **${raidDay}** have been unlocked. Tardy members may now sign up.`,
+                            });
+                        }
+                
+                        await interaction.reply({ content: `✅ Raid unlocked for **${raidDay}**.`, ephemeral: true });
+                    } else {
+                        // Lock the raid and assign bosses
+                        const runs = poll.dayRaidCounts?.[raidDay] || 1;
+                
+                        // Only assign bosses if none were previously assigned
+                        if (!dayData.selectedBosses || dayData.selectedBosses.length === 0) {
+                            dayData.selectedBosses = [];
+                            for (let i = 0; i < runs; i++) {
+                                try {
+                                    const selectedBoss = pollHelpers.matchmakeBoss(poll, dayData);
+                                    dayData.selectedBosses.push(selectedBoss);
+                                } catch (error) {
+                                    console.error('Error in matchmaking:', error);
+                                    return sendErrorReply(interaction, 'No eligible bosses found based on attendance.');
+                                }
+                            }
+                        }
+                
+                        dayData.locked = true;
+                        saveSignUpData(signUpData);
+                
+                        const lockEmbed = new EmbedBuilder()
+                            .setTitle(`🔒 Raid Locked | Bosses: ${dayData.selectedBosses.join(', ')}`)
+                            .setDescription(
+                                `**Raid Day:** ${raidDay}\n` +
+                                `**Number of Runs:** ${runs}\n` +
+                                `**Selected Bosses:** ${dayData.selectedBosses.join(', ')}\n` +
+                                `**Sign-Up Status:** Locked`
+                            )
+                            .setColor('Red');
+                
+                        await interaction.message.edit({ embeds: [lockEmbed] });
+                
+                        const lockThread = await getOrCreateThread(interaction, threadName);
+                        if (lockThread) {
+                            await lockThread.send({
+                                content: `@everyone The raid has been locked! The selected bosses are **${dayData.selectedBosses.join(', ')}**.`,
+                                allowedMentions: { parse: ['everyone'] },
+                            });
+                        }
+                
+                        await interaction.reply({ content: `✅ Raid locked with bosses: **${dayData.selectedBosses.join(', ')}**.`, ephemeral: true });
+                    }
+                    break;                
 
             case 'close':
                 if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
