@@ -1,8 +1,8 @@
 /**
- * @file Interaction Button Handler
+ * @file buttonInteraction.js
  * @description Handles button interactions for various commands and features in the Discord bot.
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.2.0
  */
 
 /**********************************************************************/
@@ -62,7 +62,7 @@ module.exports = {
         const mainAction = prefix;
 
         // Raid Handling
-        if (['signUp', 'signIn', 'close', 'lock'].includes(mainAction)) {
+        if (['signUp', 'signIn', 'close', 'lock', 'override'].includes(mainAction)) {
             const raidHandler = client.buttonCommands.get('raid_day');
             if (raidHandler) {
                 try {
