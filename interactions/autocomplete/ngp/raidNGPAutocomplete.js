@@ -1,5 +1,5 @@
 /**
- * @file Raid NGP Autocomplete Handler
+ * @file raidNGPAutocomplete
  * @description Handles the autocomplete interaction for the "raidngp" command to assist users with selecting items or raids dynamically.
  * @author Aardenfell
  * @since 1.0.0

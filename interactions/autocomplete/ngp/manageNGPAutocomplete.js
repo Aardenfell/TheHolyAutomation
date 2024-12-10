@@ -1,5 +1,5 @@
 /**
- * @file ManageNGP Autocomplete Handler
+ * @file manageNGPAutocomplete.js
  * @description Handles the autocomplete interaction for the manageNGP command, providing suggestions for active NGP events.
  * @author Aardenfell
  * @since 1.0.0
