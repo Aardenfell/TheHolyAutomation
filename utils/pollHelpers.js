@@ -3,7 +3,7 @@
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.2.0
  */
 
 const fs = require('fs');
@@ -299,24 +299,24 @@ const pollHelpers = {
      */
     async handlePollExpiration(client, currentTime) {
         const polls = this.loadPollData();
-    
+
         for (const poll of polls) {
             if (!poll.active) continue;
-    
+
             const timeUntilExpiration = poll.expiration - currentTime;
-    
+
             if (timeUntilExpiration <= 0) {
                 console.log(`Poll expired: ${poll.pollId}`);
-    
+
                 // Mark poll as inactive immediately to prevent re-processing
                 // poll.active = false;
                 // this.savePollData(polls); // Persist state before calling endPoll
-    
+
                 // Process expiration
                 await this.endPoll(client, poll.pollId, poll.channelId, poll.debug);
             }
         }
-    
+
         // console.log("handlePollExpiration completed.");
     },
 
@@ -496,7 +496,7 @@ const pollHelpers = {
 
         console.log("Poll after modifications:", JSON.stringify(poll, null, 2));
         poll.active = false;
-        
+
         // Save updated poll data
         this.savePollData(polls);
 
@@ -662,8 +662,50 @@ const pollHelpers = {
 
         return selectedBoss.name;
     },
+    // /**
+    //  * @function handleOverride
+    //  * @description Handles the override logic for raid runs, allowing manual boss selection or using the matchmaker.
+    //  * @param {Object} poll - The poll object containing data for the raid.
+    //  * @param {Object} overrideSelections - An array of boss names or "matchmake" for each run.
+    //  * @param {Object} dayData - The data for the specific raid day.
+    //  */
+    // handleOverride(poll, overrideSelections, dayData) {
+    //     const guildId = poll.guildId;
 
+    //     if (!guildId || !poll || !overrideSelections || !dayData) {
+    //         throw new Error('Invalid data for override handling.');
+    //     }
 
+    //     const bossesData = this.loadOrCreateGuildJson(guildId, bossesDataPath, []);
+
+    //     // Loop through each run and handle overrides
+    //     const selectedBosses = [];
+    //     overrideSelections.forEach((selection, index) => {
+    //         if (selection === 'matchmake') {
+    //             try {
+    //                 const matchedBoss = this.matchmakeBoss(poll, dayData);
+    //                 selectedBosses.push(matchedBoss);
+    //             } catch (error) {
+    //                 console.error(`Matchmaker failed for run ${index + 1}:`, error);
+    //                 selectedBosses.push(null); // Placeholder if matchmaking fails
+    //             }
+    //         } else {
+    //             const bossExists = bossesData.some(boss => boss.name === selection);
+    //             if (bossExists) {
+    //                 selectedBosses.push(selection);
+    //             } else {
+    //                 console.warn(`Invalid boss selected for run ${index + 1}: ${selection}`);
+    //                 selectedBosses.push(null); // Placeholder for invalid selection
+    //             }
+    //         }
+    //     });
+
+    //     // Save the selections back to dayData
+    //     dayData.selectedBosses = selectedBosses.filter(boss => boss !== null); // Remove invalid placeholders
+    //     this.saveSignUpData(dayData);
+
+    //     return selectedBosses;
+    // },
 
 
     /**
@@ -807,6 +849,7 @@ const pollHelpers = {
                 new ButtonBuilder().setCustomId(`signUp_${day}`).setLabel('🔔').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId(`signIn_${day}`).setLabel('Sign In').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId(`lock_${day}`).setLabel('Lock').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId(`override_${day}`).setLabel('Override').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`close_${day}`).setLabel('Close').setStyle(ButtonStyle.Secondary)
             );
 
@@ -890,6 +933,7 @@ const pollHelpers = {
             signedIn: [],
             locked: false,
             closed: false,
+            overridden: false,
         });
 
         // Save updated data
