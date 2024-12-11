@@ -3,7 +3,7 @@
  * @description This file handles boss poll data management and interaction with Discord channels to post poll results.
  * @author Aardenfell
  * @since 1.0.0
- * @version 2.2.0
+ * @version 2.2.1
  */
 
 const fs = require('fs');
@@ -772,7 +772,7 @@ const pollHelpers = {
      * @param {Client} client - The Discord client object.
      * @param {Array} bosses - Array of top bosses selected in the poll.
      */
-    async createSignUpPosts(client, bosses, poll) {
+    async createSignUpPosts(client, bosses, poll, overrideTimes = null) {
 
         const guildId = poll.guildId;
 
@@ -782,7 +782,6 @@ const pollHelpers = {
         }
 
         const signUpChannelId = config.guilds[guildId].raidSignUp;
-        // const passwordChannelId = config.guilds[guildId].raidPassword;
         const privateThreadId = config.channels.raidPasswordThread;
 
         if (!signUpChannelId || !privateThreadId) {
@@ -794,7 +793,7 @@ const pollHelpers = {
         const privateThread = await client.channels.fetch(privateThreadId);
 
         const { dayRaidCounts } = poll;
-        // const defaultRaidSchedule = config.raids.defaultRaidSchedule;
+        const defaultRaidSchedule = config.guilds[guildId].defaultRaidSchedule;
 
         if (!dayRaidCounts || typeof dayRaidCounts !== 'object') {
             console.error("Invalid or missing dayRaidCounts:", dayRaidCounts);
@@ -820,10 +819,16 @@ const pollHelpers = {
 
             const password = this.generatePassword();
 
+            // Fallback time if defaultRaidSchedule is missing or incomplete
+            const fallbackTime = "19:00"; // Default time to use
+            const scheduleTime = overrideTimes && overrideTimes.includes(day)
+            ? overrideTimes[overrideDays.indexOf(day)] // Use override time if provided
+            : defaultRaidSchedule[day] || fallbackTime;
+
 
             // Calculate the Unix timestamp for the specific raid time on the given day
             const raidDate = new Date();
-            const [hours, minutes] = config.guilds[guildId].defaultRaidSchedule[day].split(':').map(Number);
+            const [hours, minutes] = scheduleTime.split(':').map(Number);
             raidDate.setHours(hours, minutes, 0, 0);
 
             // Find the next occurrence of the specified day of the week
