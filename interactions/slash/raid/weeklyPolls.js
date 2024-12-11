@@ -1,9 +1,9 @@
 /**
  * @file weeklyPolls.js
- * @description This command allows users to start a poll to select bosses for the weekly raid. Users can provide various options such as poll duration, debug mode, and override raid days and counts.
+ * @description This command allows users to start a poll to select bosses for the weekly raid. Users can provide various options such as poll duration, debug mode, and override raid days, counts, and times.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.2.1
  */
 
 /**********************************************************************/
@@ -46,6 +46,11 @@ module.exports = {
             option.setName('counts')
                 .setDescription('Override raid counts for days (comma-separated, e.g., "2,3,1")')
                 .setRequired(false)
+        )
+        .addStringOption(option =>
+            option.setName('times')
+                .setDescription('Override raid times for days IN CST (comma-separated, e.g., "19:00,20:30,21:00")')
+                .setRequired(false)
         ),
 
     /**
@@ -72,11 +77,19 @@ module.exports = {
         const duration = debugMode ? 0.02 : (interaction.options.getInteger('duration') || 12); // Default 12 hours
         const overrideDays = interaction.options.getString('days')?.split(',').map(day => day.trim());
         const overrideCounts = interaction.options.getString('counts')?.split(',').map(count => parseInt(count.trim(), 10));
+        const overrideTimes = interaction.options.getString('times')?.split(',').map(time => time.trim());
 
         // Validate override inputs
         if (overrideCounts && overrideDays && overrideDays.length !== overrideCounts.length) {
             return interaction.reply({
                 content: 'The number of override days and counts must match!',
+                ephemeral: true,
+            });
+        }
+
+        if (overrideTimes && overrideDays && overrideDays.length !== overrideTimes.length) {
+            return interaction.reply({
+                content: 'The number of override days and times must match!',
                 ephemeral: true,
             });
         }
@@ -104,6 +117,7 @@ module.exports = {
             debug: debugMode,
             overrideDays,
             overrideCounts,
+            overrideTimes, // Pass overrideTimes to pollHelpers
         });
     },
 };
