@@ -1,8 +1,8 @@
 # The Holy Automation
 
-![Project Status](https://img.shields.io/badge/Status-Active-green) [![GitHub license](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![GitHub issues](https://img.shields.io/github/issues/Aardenfell/The-Holy-Automation) ![GitHub pull requests](https://img.shields.io/github/issues-pr/Aardenfell/The-Holy-Automation)
+![Project Status](https://img.shields.io/badge/Status-Active-green) [![GitHub license](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![GitHub issues](https://img.shields.io/github/issues/Aardenfell/TheHolyAutomation) ![GitHub pull requests](https://img.shields.io/github/issues-pr/Aardenfell/TheHolyAutomation)
 
-![GitHub stars](https://img.shields.io/github/stars/Aardenfell/The-Holy-Automation?style=social) ![GitHub forks](https://img.shields.io/github/forks/Aardenfell/The-Holy-Automation?style=social) ![GitHub watchers](https://img.shields.io/github/watchers/Aardenfell/The-Holy-Automation?style=social) ![GitHub follow](https://img.shields.io/github/followers/Aardenfell?label=Follow&style=social)
+![GitHub stars](https://img.shields.io/github/stars/Aardenfell/TheHolyAutomation?style=social) ![GitHub forks](https://img.shields.io/github/forks/Aardenfell/TheHolyAutomation?style=social) ![GitHub watchers](https://img.shields.io/github/watchers/Aardenfell/TheHolyAutomation?style=social) ![GitHub follow](https://img.shields.io/github/followers/Aardenfell?label=Follow&style=social)
 
 ## Overview
 
@@ -41,7 +41,7 @@
 
 1. **Clone the repository** to your local machine:
    ```sh
-   git clone https://github.com/Aardenfell/The-Holy-Automation.git
+   git clone https://github.com/Aardenfell/TheHolyAutomation.git
    ```
 
 2. **Install dependencies**:
@@ -81,7 +81,7 @@ A: Use the `config.json` file to set each system to `true` or `false` as needed.
 
 ## Feedback and Contributions
 
-Feedback and contributions are always welcome! Feel free to open an issue or submit a pull request [here](https://github.com/Aardenfell/The-Holy-Automation/issues).
+Feedback and contributions are always welcome! Feel free to open an issue or submit a pull request [here](https://github.com/Aardenfell/TheHolyAutomation/issues).
 
 ## License
 
