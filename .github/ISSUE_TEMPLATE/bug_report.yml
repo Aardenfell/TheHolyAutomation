@@ -3,7 +3,7 @@ description: Report a problem with the project so it can be addressed.
 title: "[Bug]: "
 labels: ["bug", "triage"]
 assignees:
-  - octocat
+  - aardenfell
 body:
   - type: markdown
     attributes:
@@ -11,7 +11,7 @@ body:
         Thanks for taking the time to report a bug! Please fill out the form below to help us address it quickly.
 
   - type: input
-    id: contact
+    id: aardenfell
     attributes:
       label: Contact Details
       description: How can we reach out to you if more information is needed?
