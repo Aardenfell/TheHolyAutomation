@@ -1,5 +1,5 @@
 /**
- * @file guildAccessModals
+ * @file guildAccessModals.js
  * @description Handles interaction events for the new recruit and envoy modals, updating roles, nicknames, and sending welcome messages.
  * @author Aardenfell
  * @since 1.0.0

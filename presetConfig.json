@@ -9,6 +9,7 @@
         "ngpNeedValidationSubsystem": true,
         "guildPointsSystem": true,
         "guildAccessSystem": true,
+        "itemTrackingSystem": true,
         "bossRaidSystem": true,
         "voiceHubSystem": true,
         "debugSystem": true

@@ -2,7 +2,7 @@
  * @file ngpHelpers.js
  * @author Aardenfell
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.3.0
  */
 
 const fs = require('fs');
@@ -13,10 +13,12 @@ const { ButtonBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle } = require('
 const ngpEventsPath = path.join(__dirname, '../data/ngpEvents.json');
 const winnersPath = path.join(__dirname, '../data/winners.json');
 const { getUserBalance, updateUserBalance, logTransaction, distributePointsIfNotDone } = require('./pointsHelper');
+const { trackItemForGuildMember } = require('./guildItemTracking');
 const { saveNGPEvents, getCurrentEvents } = require('./eventUtils');
 const distributorPing = config.roles.distributor
 const logChannelId = config.channels.ngpLog
 const guildPointsSystemEnabled = config.systems.guildPointsSystem || false;
+const itemTrackingSystemEnabled = config.systems.itemTrackingSystem || false;
 
 /**
  * @function getNGPEventById
@@ -60,14 +62,14 @@ function isValidClient(client) {
  */
 async function checkAndDeclareWinner(eventId, interaction, client) {
     // console.log('Debug: checkAndDeclareWinner called with client:', client);
-    
+
     if (!isValidClient(client)) {
         console.error('Invalid client passed to checkAndDeclareWinner.');
         return;
     }
-    
-    
-    
+
+
+
     const eventsData = JSON.parse(fs.readFileSync(ngpEventsPath, 'utf-8'));
     const event = eventsData.find(event => event.event_id === eventId);
     if (!event || !Array.isArray(event.participants)) {
@@ -96,7 +98,7 @@ async function checkAndDeclareWinner(eventId, interaction, client) {
         // Distribute points among participants who passed
         if (guildPointsSystemEnabled) {
             distributePointsIfNotDone(event, client);
-            }
+        }
 
         if (!event.is_open_ngp) {
             // Mark private events as inactive and create an open NGP
@@ -134,7 +136,7 @@ async function checkAndDeclareWinner(eventId, interaction, client) {
     // Distribute points to participants who passed based on event rarity
     if (guildPointsSystemEnabled) {
         distributePointsIfNotDone(event, client);
-        }
+    }
     finalizeEvent(event, winner, client); // Mark event as inactive
     saveNGPEvents(eventsData);
 
@@ -257,13 +259,13 @@ async function processExpiredEvent(client, event, eventsData) {
         // Distribute points to eligible participants (passers who didn't bid)
         if (guildPointsSystemEnabled) {
             distributePointsIfNotDone(event, client);
-            }
+        }
     } else {
         await handleNoWinner(client, event, eventsData);
         // Distribute points to eligible participants (passers who didn't bid)
         if (guildPointsSystemEnabled) {
             distributePointsIfNotDone(event, client);
-            }
+        }
     }
 }
 
@@ -356,10 +358,16 @@ function finalizeEvent(event, winner, client) {
     event.winner = winner.name;
     event.active = false;
 
+    // Log the item for the winner
+    if (itemTrackingSystemEnabled && ['Need', 'Bid'].includes(winner.roll_type)) {
+        trackItemForGuildMember(winner.name.replace(/[<@>]/g, ''), event.item, winner.roll_type);
+    }
+    
+
     // Distribute points to eligible participants (passers who didn't bid)
     if (guildPointsSystemEnabled) {
         distributePointsIfNotDone(event, client);
-        }
+    }
 }
 /**
  * @function announceWinner
@@ -415,7 +423,7 @@ async function announceWinner(client, event, winner) {
             // Find the thread that matches the winner's ID or name
             const winnerIdRaw = winner.name.replace(/[<@>]/g, ''); // Extract user ID
             const normalizedName = winner.name.toLowerCase();
-            const matchingThread = allThreads.find(thread => 
+            const matchingThread = allThreads.find(thread =>
                 thread.name.includes(winnerIdRaw) || thread.name.toLowerCase().includes(normalizedName)
             );
 

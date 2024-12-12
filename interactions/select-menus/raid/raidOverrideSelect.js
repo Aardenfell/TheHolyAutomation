@@ -1,14 +1,5 @@
-/**
- * @file raidOverrideSelect.js
- * @description Handles the logic for the override select menu for raid polls.
- * @author Aardenfell
- * @since 2.2.0
- * @version 2.2.0
- */
-
 const { EmbedBuilder } = require('discord.js');
 const pollHelpers = require('../../../utils/pollHelpers.js');
-const config = require('../../../config.json');
 const path = require('path');
 const fs = require('fs');
 
@@ -45,28 +36,25 @@ module.exports = {
         console.log('Executing override select menu handler.');
         console.log('Interaction customId:', interaction.customId);
 
-        const [prefix, selectType, raidDayOrRun] = interaction.customId.split('_');
-        let raidDay, runIndex;
+        const [prefix, selectType, raidDay, runIndex, messageId] = interaction.customId.split('_');
 
-        if (prefix === 'override' && selectType === 'select') {
-            raidDay = raidDayOrRun;
-            runIndex = interaction.customId.split('_').pop(); // Get the last part as runIndex
-        } else {
-            raidDay = selectType;
-            runIndex = raidDayOrRun;
-        }
-
-        const messageId = interaction.message.reference?.messageId || interaction.message.id;
-
-        // Load data
         const signUpData = loadSignUpData();
         const dayData = signUpData.find(data => data.messageId === messageId);
-        const poll = dayData ? pollHelpers.loadPollData().find(p => p.pollId === dayData.pollId) : null;
 
-        if (!dayData || !poll) {
-            console.error('Day data or poll not found.', { dayData, poll });
+        if (!dayData) {
+            console.error('Day data not found for messageId:', messageId);
             return interaction.reply({
-                content: 'Unable to find data for this raid day or poll.',
+                content: 'Unable to find data for this raid day.',
+                ephemeral: true,
+            });
+        }
+
+        const poll = pollHelpers.loadPollData().find(p => p.pollId === dayData.pollId);
+
+        if (!poll) {
+            console.error('Poll data not found.');
+            return interaction.reply({
+                content: 'Unable to find poll data for this raid.',
                 ephemeral: true,
             });
         }
@@ -78,11 +66,6 @@ module.exports = {
         console.log('Raid day:', raidDay);
         console.log('Run index:', runIndex);
 
-        // Ensure dayData.selectedBosses is initialized correctly
-        if (!Array.isArray(dayData.selectedBosses)) {
-            dayData.selectedBosses = Array(runs).fill('matchmake');
-        }
-
         const index = parseInt(runIndex, 10); // Ensure index is an integer
         if (isNaN(index) || index < 0 || index >= runs) {
             console.error('Invalid run index:', runIndex);
@@ -90,6 +73,11 @@ module.exports = {
                 content: 'Invalid run selection. Please contact an admin.',
                 ephemeral: true,
             });
+        }
+
+        // Ensure dayData.selectedBosses is initialized correctly
+        if (!Array.isArray(dayData.selectedBosses)) {
+            dayData.selectedBosses = Array(runs).fill('matchmake');
         }
 
         // Update the selected boss for the specific run
