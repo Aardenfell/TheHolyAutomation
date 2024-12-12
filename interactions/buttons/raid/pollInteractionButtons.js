@@ -1,5 +1,5 @@
 /**
- * @file pollInteractionHandler.js
+ * @file pollInteractionButtons.js
  * @description Handles button interactions for raid day sign-up, sign-in, and administrative actions like lock/unlock and close.
  * @author Aardenfell
  * @since 1.0.0
@@ -9,7 +9,7 @@
 /**********************************************************************/
 // Required Modules
 
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const pollHelpers = require('../../../utils/pollHelpers.js');
@@ -97,6 +97,67 @@ const sendErrorReply = async (interaction, message) => {
         ephemeral: true,
     });
 };
+
+function buildPageComponents(page, raidDay, poll, runs, runsPerPage, totalPages, messageId) {
+    const start = page * runsPerPage;
+    const end = Math.min(start + runsPerPage, runs);
+
+    console.log(`[DEBUG] Building components for Page: ${page}, Start: ${start}, End: ${end}`);
+
+    const selectMenus = Array.from({ length: end - start }, (_, index) =>
+        new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId(`override_select_${raidDay}_${start + index}_${messageId}`) // Include messageId
+                .setPlaceholder(`Select boss for Run ${start + index + 1}`)
+                .addOptions(
+                    poll.bosses
+                        .filter(boss => boss.name && boss.name.trim() !== '')
+                        .map(boss => ({ label: boss.name, value: boss.name }))
+                        .concat([{ label: 'Matchmake', value: 'matchmake' }])
+                )
+        )
+    );
+
+    /// Add navigation buttons
+    if (totalPages > 1) {
+        const navigationButtons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`override_previous_${raidDay}_${page}_${messageId}`) // Include messageId
+                .setLabel('Previous')
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(page === 0),
+            new ButtonBuilder()
+                .setCustomId(`override_next_${raidDay}_${page}_${messageId}`) // Include messageId
+                .setLabel('Next')
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(page === totalPages - 1)
+        );
+        selectMenus.push(navigationButtons);
+    }
+
+    console.log(`[DEBUG] Built Components for Page: ${page}`);
+    return selectMenus;
+}
+
+function buildOverrideEmbed(raidDay, poll, dayData) {
+    const votedBosses = poll.bosses
+        .filter(boss => boss.voters.length > 0)
+        .map(boss => `**${boss.name}** - Voters: ${boss.voters.map(voter => `<@${voter}>`).join(', ')}`)
+        .join('\n') || 'No votes yet.';
+
+    const signedInUsers = dayData.signedIn
+        .map(userId => `<@${userId}>`)
+        .join(', ') || 'No users signed in yet.';
+
+    return new EmbedBuilder()
+        .setTitle(`⚙️ Override Settings | ${raidDay}`)
+        .setDescription(
+            `Use the menus below to override the bosses for this raid day or select "Matchmake" for automated matchmaking.\n\n` +
+            `**Voted Bosses:**\n${votedBosses}\n\n` +
+            `**Currently Signed In:**\n${signedInUsers}`
+        )
+        .setColor('Yellow');
+}
 
 /**********************************************************************/
 // Module Exports - Poll Interaction Execution
@@ -259,58 +320,69 @@ module.exports = {
 
 
                 case 'override':
+                    console.log(`[DEBUG] Received override action: ${action}`);
+                    
+                    // Extract messageId from interaction or customId
+                    const messageId = interaction.message.id;
+                    
                     if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
+                        console.error(`[DEBUG] User does not have permission to override. UserID: ${interaction.user.id}`);
                         return sendErrorReply(interaction, 'You do not have permission to override raid runs.');
                     }
                 
-                    // Prepare select menus for overrides
-                    const runs = poll.dayRaidCounts?.[raidDay] || 1;
+                    if (interaction.customId.startsWith('override_next') || interaction.customId.startsWith('override_previous')) {
+                        // Navigation logic
+                        const match = interaction.customId.match(/override_(next|previous)_(.+)_(\d+)_(.+)/);
+                        if (!match) {
+                            console.error(`[DEBUG] Failed to parse customId: ${interaction.customId}`);
+                            return sendErrorReply(interaction, 'Invalid action format.');
+                        }
                 
-                    // Filter out invalid bosses and map to menu options
-                    const bosses = poll.bosses.filter(boss => boss.name && boss.name.trim() !== '');
-                    const menuOptions = bosses.map(boss => ({ label: boss.name, value: boss.name }))
-                        .concat([{ label: 'Matchmake', value: 'matchmake' }]);
+                        const direction = match[1];
+                        const raidDay = match[2];
+                        let currentPage = parseInt(match[3], 10);
+                        const messageId = match[4];
                 
-                    // Ensure menu options are valid
-                    if (menuOptions.length === 0) {
-                        return sendErrorReply(interaction, 'No valid bosses available for override.');
+                        currentPage += direction === 'next' ? 1 : -1;
+                
+                        const dayData = signUpData.find(data => data.messageId === messageId);
+                        if (!dayData) {
+                            console.error(`[DEBUG] No dayData found for MessageID: ${messageId}`);
+                            return sendErrorReply(interaction, 'No data found for this raid day.');
+                        }
+                
+                        const runs = poll.dayRaidCounts?.[raidDay] || 1;
+                        const runsPerPage = 4;
+                        const totalPages = Math.ceil(runs / runsPerPage);
+                
+                        const pageComponents = buildPageComponents(currentPage, raidDay, poll, runs, runsPerPage, totalPages, messageId);
+                
+                        return interaction.update({
+                            embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
+                            components: pageComponents,
+                            ephemeral: true,
+                        });
+                    } else {
+                        // Initial override logic
+                        const runs = poll.dayRaidCounts?.[raidDay] || 1;
+                        const runsPerPage = 4;
+                        const totalPages = Math.ceil(runs / runsPerPage);
+                
+                        const dayData = signUpData.find(data => data.messageId === messageId);
+                        if (!dayData) {
+                            console.error(`[DEBUG] No dayData found for MessageID: ${messageId}`);
+                            return sendErrorReply(interaction, 'No data found for this raid day.');
+                        }
+                
+                        const initialComponents = buildPageComponents(0, raidDay, poll, runs, runsPerPage, totalPages, messageId);
+                
+                        return interaction.reply({
+                            embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
+                            components: initialComponents,
+                            ephemeral: true,
+                        });
                     }
                 
-                    const actionRows = Array.from({ length: runs }, (_, index) =>
-                        new ActionRowBuilder().addComponents(
-                            new StringSelectMenuBuilder()
-                                .setCustomId(`override_select_${raidDay}_${index}`)
-                                .setPlaceholder(`Select boss for Run ${index + 1}`)
-                                .addOptions(menuOptions) // Add validated options
-                        )
-                    );
-                
-                    // Build the embed with the bosses voted for and currently signed-in users
-                    const votedBosses = poll.bosses
-                        .filter(boss => boss.voters.length > 0)
-                        .map(boss => `**${boss.name}** - Voters: ${boss.voters.map(voter => `<@${voter}>`).join(', ')}`)
-                        .join('\n') || 'No votes yet.';
-                
-                    const signedInUsers = dayData.signedIn
-                        .map(userId => `<@${userId}>`)
-                        .join(', ') || 'No users signed in yet.';
-                
-                    const overrideEmbed = new EmbedBuilder()
-                        .setTitle(`⚙️ Override Settings | ${raidDay}`)
-                        .setDescription(
-                            `Use the menus below to override the bosses for this raid day or select "Matchmake" for automated matchmaking.\n\n` +
-                            `**Voted Bosses:**\n${votedBosses}\n\n` +
-                            `**Currently Signed In:**\n${signedInUsers}`
-                        )
-                        .setColor('Yellow');
-                
-                    await interaction.reply({
-                        content: "",
-                        embeds: [overrideEmbed],
-                        components: actionRows,
-                        ephemeral: true,
-                    });
-                    break;
 
 
             case 'close':
