@@ -298,22 +298,24 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
   }
 
   const rarityPoints = {
-    rare: 1,
-    epic: 6,
-    epic2: 75,
-    sellable: 12,
+    rare: { pool: 1, min: 0.1 },
+    epic: { pool: 6, min: 1 },
+    epic2: { pool: 12, min: 2 }, 
+    archboss: { pool: 12, min: 2 }, 
+    sellable: { pool: 12, min: 2}
   };
 
   // Base points for the rarity
-  const basePoints = rarityPoints[rarity] || 10; // Default points if rarity is unrecognized
+  let { pool: basePoints, min: minPoints } = rarityPoints[rarity] || { pool: 10, min: 0.1 }; // Default values if rarity is unrecognized
 
   // Apply a multiplier for Guild Raid events
   let multiplierApplied = false;
   let totalPoints = basePoints;
   if (isGuildRaid) {
-    totalPoints *= 0.5; // Apply 0.5x multiplier
+    basePoints *= 0.5; // Apply 0.5x multiplier
+    minPoints *= 0.5; // Halve the minimum value
     multiplierApplied = true;
-    console.log(`Applied 0.5x multiplier for Guild Raid. Total points: ${totalPoints}`);
+    console.log(`Applied 0.5x multiplier for Guild Raid. Adjusted pool: ${basePoints}, Adjusted min: ${minPoints}`);
   }
 
   // Filter participants eligible for rewards
@@ -328,6 +330,13 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
   if (numEligibleParticipants > 0) {
     // Calculate points per participant and total distributed points
     const pointsPerParticipant = parseFloat((totalPoints / numEligibleParticipants).toFixed(2)); // Round for clarity
+
+    // Ensure the points per participant are at least the minimum threshold
+    if (pointsPerParticipant < minPoints) {
+      pointsPerParticipant = minPoints;
+    }
+
+    // Calculate the total distributed points
     const totalDistributed = pointsPerParticipant * numEligibleParticipants;
 
     const recipientIds = eligibleParticipants.map((participant) =>
