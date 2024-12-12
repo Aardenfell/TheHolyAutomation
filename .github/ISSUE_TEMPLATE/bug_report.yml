@@ -1,0 +1,77 @@
+name: Bug Report
+description: Report a problem with the project so it can be addressed.
+title: "[BUG] <Short description of the issue>"
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the details below so we can address it as soon as possible.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Bug Summary
+      description: Provide a brief description of the issue.
+      placeholder: "e.g., Navigation buttons do not work as expected."
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this issue?
+      options:
+        - Critical: Completely blocks functionality
+        - High: Major issue but workarounds exist
+        - Medium: Minor issue, some impact
+        - Low: Cosmetic issue or suggestion
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a detailed list of steps to reproduce the issue.
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. Observe the issue...
+      value: |
+        1. 
+        2. 
+        3. 
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+      placeholder: "e.g., Clicking the Next button should move to the next set of options."
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: "e.g., Clicking the Next button does nothing."
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Describe the environment where the issue occurred (e.g., OS, browser, Discord.js version).
+      placeholder: "e.g., Windows 10, Node.js v16.18.0, Discord.js v14.6.0."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or logs related to the bug.
+      placeholder: "e.g., Error logs, screenshots, related issues, etc."
+
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for helping improve the project!**
