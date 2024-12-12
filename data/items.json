@@ -497,5 +497,21 @@
     { "name": "Wraith Knight's Invincibility Gaiters", "rarity": "epic2" },
     { "name": "Wraith Knight's Judgment Gloves", "rarity": "epic2" },
     { "name": "Wraith Knight's Netherworld Headgear", "rarity": "epic2" },
-    { "name": "Wraith Knight's Punishment Boots", "rarity": "epic2" }
+    { "name": "Wraith Knight's Punishment Boots", "rarity": "epic2" },
+    { "name": "Golem Shattering Spear", "rarity": "rare" },
+    { "name": "Halberd of the Resistance", "rarity": "rare" },
+    { "name": "Razorsteel Pike", "rarity": "rare" },
+    { "name": "Templar Trident", "rarity": "rare" },
+    { "name": "Heroic Polearm of the Resistance", "rarity": "epic" },
+    { "name": "Junobote's Smoldering Ranseur", "rarity": "epic" },
+    { "name": "Queen Bellandir's Serrated Spike", "rarity": "epic" },
+    { "name": "Shaikal's Mindveil Harpoon", "rarity": "epic" },
+    { "name": "Skull Severing Spear", "rarity": "epic" },
+    { "name": "Black Anvil Crushing Spear", "rarity": "epic2" },
+    { "name": "Blind Greed's Murdering Spear", "rarity": "epic2" },
+    { "name": "Crimson's Carnage Spear", "rarity": "epic2" },
+    { "name": "Deluzhnoa's Hail Spear", "rarity": "epic2" },
+    { "name": "Mad Wraith's Fear Spear", "rarity": "epic2" },
+    { "name": "Pakilo Naru's Sawblade Spear", "rarity": "epic2" },
+    { "name": "Stormy Wind Spear", "rarity": "epic2" }
 ]
