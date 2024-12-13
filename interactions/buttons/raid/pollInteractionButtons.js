@@ -3,7 +3,7 @@
  * @description Handles button interactions for raid day sign-up, sign-in, and administrative actions like lock/unlock and close.
  * @author Aardenfell
  * @since 1.0.0
- * @version 2.2.0
+ * @version 2.5.0
  */
 
 /**********************************************************************/
@@ -149,11 +149,15 @@ function buildOverrideEmbed(raidDay, poll, dayData) {
         .map(userId => `<@${userId}>`)
         .join(', ') || 'No users signed in yet.';
 
-    return new EmbedBuilder()
+        return new EmbedBuilder()
         .setTitle(`⚙️ Override Settings | ${raidDay}`)
         .setDescription(
             `Use the menus below to override the bosses for this raid day or select "Matchmake" for automated matchmaking.\n\n` +
-            `**Voted Bosses:**\n${votedBosses}\n\n` +
+            `**Override Selections:**\n` +
+            dayData.selectedBosses
+                .map((boss, idx) => `Run ${idx + 1}: **${boss === 'matchmake' ? 'Matchmake' : boss}**`)
+                .join('\n') +
+            `\n\n**Voted Bosses:**\n${votedBosses}\n\n` +
             `**Currently Signed In:**\n${signedInUsers}`
         )
         .setColor('Yellow');
@@ -163,6 +167,9 @@ function buildOverrideEmbed(raidDay, poll, dayData) {
 // Module Exports - Poll Interaction Execution
 
 module.exports = {
+    
+    buildOverrideEmbed,
+    
     id: 'raid_day',
 
     /**
@@ -171,23 +178,41 @@ module.exports = {
      * @param {import('discord.js').ButtonInteraction} interaction - The interaction object from Discord.
      */
     async execute(interaction) {
-        const [action, raidDay] = interaction.customId.split('_'); // E.g., "signUp_Friday"
         const userId = interaction.user.id;
+        const customId = interaction.customId;
+        console.log(`[DEBUG] Parsed action from customId: ${customId}`);
+
+        // Extract action and raidDay from customId
+        let [action, raidDay] = customId.split('_');
+
+        // Extract messageId if included in the customId
+        let messageId;
+        const customIdMatch = customId.match(/override_(next|previous|select)_(.+)_(\d+)_(.+)/);
+        if (customIdMatch) {
+            action = `override_${customIdMatch[1]}`; // e.g., "override_next" or "override_previous"
+            raidDay = customIdMatch[2]; // e.g., "Wednesday"
+            messageId = customIdMatch[4]; // Extracted messageId
+        }
 
         // Load sign-up data
         const signUpData = loadSignUpData();
-        const dayData = signUpData.find(data => data.messageId === interaction.message.id);
 
+        // Use extracted messageId if available; otherwise, default to interaction.message.id
+        const effectiveMessageId = messageId || interaction.message.id;
+        const dayData = signUpData.find(data => data.messageId === effectiveMessageId);
 
         if (!dayData) {
+            console.error(`[DEBUG] No dayData found for MessageID: ${effectiveMessageId}`);
             return sendErrorReply(interaction, 'No data found for this raid day.');
         }
 
+        // Load poll data associated with this raid
         const poll = pollHelpers.loadPollData().find(p => p.pollId === dayData.pollId);
-
         if (!poll) {
+            console.error(`[DEBUG] No poll found for PollID: ${dayData.pollId}`);
             return sendErrorReply(interaction, 'No poll data found for this raid day.');
         }
+
         const bossName = dayData.selectedBosses?.join(', ') || 'Pending Selection';
         const threadName = `Raid Sign-Up for ${raidDay} | id:${dayData.messageId}`;
 
@@ -319,70 +344,89 @@ module.exports = {
                 break;
 
 
-                case 'override':
-                    console.log(`[DEBUG] Received override action: ${action}`);
-                    
-                    // Extract messageId from interaction or customId
-                    const messageId = interaction.message.id;
-                    
-                    if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
-                        console.error(`[DEBUG] User does not have permission to override. UserID: ${interaction.user.id}`);
-                        return sendErrorReply(interaction, 'You do not have permission to override raid runs.');
-                    }
-                
-                    if (interaction.customId.startsWith('override_next') || interaction.customId.startsWith('override_previous')) {
-                        // Navigation logic
-                        const match = interaction.customId.match(/override_(next|previous)_(.+)_(\d+)_(.+)/);
-                        if (!match) {
-                            console.error(`[DEBUG] Failed to parse customId: ${interaction.customId}`);
-                            return sendErrorReply(interaction, 'Invalid action format.');
-                        }
-                
-                        const direction = match[1];
-                        const raidDay = match[2];
-                        let currentPage = parseInt(match[3], 10);
-                        const messageId = match[4];
-                
-                        currentPage += direction === 'next' ? 1 : -1;
-                
-                        const dayData = signUpData.find(data => data.messageId === messageId);
-                        if (!dayData) {
-                            console.error(`[DEBUG] No dayData found for MessageID: ${messageId}`);
-                            return sendErrorReply(interaction, 'No data found for this raid day.');
-                        }
-                
-                        const runs = poll.dayRaidCounts?.[raidDay] || 1;
-                        const runsPerPage = 4;
-                        const totalPages = Math.ceil(runs / runsPerPage);
-                
-                        const pageComponents = buildPageComponents(currentPage, raidDay, poll, runs, runsPerPage, totalPages, messageId);
-                
-                        return interaction.update({
-                            embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
-                            components: pageComponents,
-                            ephemeral: true,
-                        });
-                    } else {
-                        // Initial override logic
-                        const runs = poll.dayRaidCounts?.[raidDay] || 1;
-                        const runsPerPage = 4;
-                        const totalPages = Math.ceil(runs / runsPerPage);
-                
-                        const dayData = signUpData.find(data => data.messageId === messageId);
-                        if (!dayData) {
-                            console.error(`[DEBUG] No dayData found for MessageID: ${messageId}`);
-                            return sendErrorReply(interaction, 'No data found for this raid day.');
-                        }
-                
-                        const initialComponents = buildPageComponents(0, raidDay, poll, runs, runsPerPage, totalPages, messageId);
-                
-                        return interaction.reply({
-                            embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
-                            components: initialComponents,
-                            ephemeral: true,
-                        });
-                    }
-                
+            case 'override':
+                console.log(`[DEBUG] Received override action: ${action}`);
+                // Existing override logic for initial page
+                const runs = dayData.selectedBosses.length;
+                const runsPerPage = 4;
+                const totalPages = Math.ceil(runs / runsPerPage);
+
+                const pageComponents = buildPageComponents(
+                    0,
+                    raidDay,
+                    poll,
+                    runs,
+                    runsPerPage,
+                    totalPages,
+                    dayData.messageId
+                );
+
+                console.log(`[DEBUG] Opening initial Override Page 0 for Raid Day: ${raidDay}`);
+                return interaction.reply({
+                    embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
+                    components: pageComponents,
+                    ephemeral: true,
+                });
+
+            case 'override_next':
+            case 'override_previous':
+                console.log(`[DEBUG] Received pagination action: ${action}`);
+                const match = customId.match(/override_(next|previous)_(.+)_(\d+)_(.+)/);
+                if (!match) {
+                    console.error(`[DEBUG] Failed to parse customId: ${customId}`);
+                    return sendErrorReply(interaction, 'Invalid action format.');
+                }
+
+                const direction = match[1]; // "next" or "previous"
+                const currentRaidDay = match[2]; // e.g., "Wednesday"
+                let currentPage = parseInt(match[3], 10); // Current page number
+                const currentMessageId = match[4]; // Extracted messageId
+
+                console.log(`[DEBUG] Parsed pagination action: Direction=${direction}, RaidDay=${currentRaidDay}, Page=${currentPage}, MessageID=${currentMessageId}`);
+
+                // Increment or decrement page
+                currentPage += direction === 'next' ? 1 : -1;
+
+                // Validate dayData existence
+                const dayDataForPagination = signUpData.find(data => data.messageId === currentMessageId);
+                if (!dayDataForPagination) {
+                    console.error(`[DEBUG] No dayData found for MessageID: ${currentMessageId}`);
+                    return sendErrorReply(interaction, 'No data found for this raid day.');
+                }
+
+                // Validate poll existence
+                const pollForPagination = pollHelpers.loadPollData().find(p => p.pollId === dayDataForPagination.pollId);
+                if (!pollForPagination) {
+                    console.error(`[DEBUG] No poll found for PollID: ${dayDataForPagination.pollId}`);
+                    return sendErrorReply(interaction, 'No poll data found for this raid day.');
+                }
+
+                // Page navigation logic
+                const runsForPagination = dayDataForPagination.selectedBosses.length;
+                const runsPerPageForPagination = 4;
+                const totalPagesForPagination = Math.ceil(runsForPagination / runsPerPageForPagination);
+
+                if (currentPage < 0 || currentPage >= totalPagesForPagination) {
+                    console.error(`[DEBUG] Invalid page navigation. CurrentPage=${currentPage}, TotalPages=${totalPagesForPagination}`);
+                    return sendErrorReply(interaction, 'Invalid page navigation.');
+                }
+
+                // Build components for the current page
+                const componentsForPagination = buildPageComponents(
+                    currentPage,
+                    currentRaidDay,
+                    pollForPagination,
+                    runsForPagination,
+                    runsPerPageForPagination,
+                    totalPagesForPagination,
+                    currentMessageId
+                );
+
+                console.log(`[DEBUG] Navigating to Page: ${currentPage} of ${totalPagesForPagination}`);
+                return interaction.update({
+                    embeds: [buildOverrideEmbed(currentRaidDay, pollForPagination, dayDataForPagination)],
+                    components: componentsForPagination,
+                });
 
 
             case 'close':
