@@ -1,0 +1,76 @@
+name: Planned Feature
+description: Document a planned feature or enhancement for the project (for internal use only).
+title: "[Planned Feature]: "
+labels: ["planned"]
+assignees:
+  - aardenfell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Note:** This template is for internal use only. If you have a suggestion or feature request, please use the [Feature Request Template](https://github.com/YourUsername/YourRepo/issues/new?template=feature-request.yml).
+        >
+        > Submissions by unauthorized users may be closed.
+
+  - type: input
+    id: feature-title
+    attributes:
+      label: Feature Title
+      description: Provide a brief, descriptive title for the planned feature.
+      placeholder: "e.g., Add multi-language support."
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-summary
+    attributes:
+      label: Feature Summary
+      description: Provide a concise summary of the planned feature or enhancement.
+      placeholder: "e.g., Allow users to select a language for the interface."
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature being planned? What problem does it solve, and how will it improve the project?
+      placeholder: "e.g., This feature will make the project more inclusive and accessible."
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation-plan
+    attributes:
+      label: Implementation Plan
+      description: Provide a detailed plan for how this feature will be implemented. Include any relevant technical details or steps.
+      placeholder: "e.g., Add a dropdown for language selection and store translations in JSON files."
+    validations:
+      required: false
+
+  - type: textarea
+    id: challenges
+    attributes:
+      label: Challenges and Considerations
+      description: Describe any potential challenges or considerations for implementing this feature.
+      placeholder: "e.g., Ensuring accurate translations and deciding how to handle untranslated strings."
+    validations:
+      required: false
+
+  - type: textarea
+    id: community-feedback
+    attributes:
+      label: Community Feedback
+      description: Summarize any feedback received about this planned feature. (Leave blank if none yet.)
+      placeholder: "e.g., Many users requested this feature to make the project more accessible."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples related to this planned feature.
+      placeholder: "e.g., Similar implementations in other projects, diagrams, etc."
+    validations:
+      required: false
