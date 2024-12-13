@@ -20,7 +20,7 @@ const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../config.
 // Module Exports - Guild Access Command Execution
 
 module.exports = {
-    id: 'guild_access', // Ensure this matches the id used in client.buttonCommands.get()
+    id: 'guild_access',
 
     /**
      * @function execute
@@ -30,115 +30,101 @@ module.exports = {
     async execute(interaction) {
         const customId = interaction.customId;
 
-        /**********************************************************************/
-        // Handle New Recruit Access
+        try {
+            /**********************************************************************/
+            // Handle New Recruit Access
 
-        if (customId === 'new_recruit') {
-            
-            // Create a dropdown for selecting a guild
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('select_guild')
-                .setPlaceholder('Select the guild you are joining')
-                .addOptions(
-                    Object.entries(config.guilds).map(([key, guild]) => ({
-                        label: guild.name,
-                        value: key
-                    }))
-                );
+            if (customId === 'new_recruit') {
+                // Defer the interaction reply
+                await interaction.deferReply({ ephemeral: true });
 
-            await interaction.reply({
-                content: 'Please select the guild you are joining:',
-                components: [new ActionRowBuilder().addComponents(selectMenu)],
-                ephemeral: true
-            });
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('select_guild')
+                    .setPlaceholder('Select the guild you are joining')
+                    .addOptions(
+                        Object.entries(config.guilds).map(([key, guild]) => ({
+                            label: guild.name,
+                            value: key,
+                        }))
+                    );
 
+                await interaction.editReply({
+                    content: 'Please select the guild you are joining:',
+                    components: [new ActionRowBuilder().addComponents(selectMenu)],
+                });
 
-            
+                /**********************************************************************/
+                // Handle Visitor Access
+            } else if (customId === 'visitor_access') {
+                // Defer the interaction reply
+                await interaction.deferReply({ ephemeral: true });
 
-        /**********************************************************************/
-        // Handle Visitor Access
+                const restrictorRole = interaction.guild.roles.cache.get(config.roles.restrictor);
+                const visitorRole = interaction.guild.roles.cache.get(config.roles.visitor);
+                const visitorChannel = interaction.guild.channels.cache.get(config.channels.visitorWelcome);
+                const member = interaction.member;
 
-        } else if (customId === 'visitor_access') {
-            const restrictorRole = interaction.guild.roles.cache.get(config.roles.restrictor);
-            const envoyRole = interaction.guild.roles.cache.get(config.roles.envoy);
-            const initiateRole = interaction.guild.roles.cache.get(config.roles.initiate);
-            const visitorRole = interaction.guild.roles.cache.get(config.roles.visitor);
-            const visitorChannel = interaction.guild.channels.cache.get(config.channels.visitorWelcome);
+                // Update roles
+                if (restrictorRole) await member.roles.remove(restrictorRole);
+                if (visitorRole) await member.roles.add(visitorRole);
 
-            const member = interaction.member;
+                // Update nickname
+                const suffix = ' | Visitor';
+                const baseName = member.user.username.length + suffix.length > 32
+                    ? member.user.username.slice(0, 32 - suffix.length).trim()
+                    : member.user.username;
 
-            // Update roles
-            if (restrictorRole) await member.roles.remove(restrictorRole);
-            if (visitorRole) await member.roles.add(visitorRole);
-            if (envoyRole) await member.roles.remove(envoyRole);
-            if (initiateRole) await member.roles.remove(initiateRole);
+                const newNickname = `${baseName}${suffix}`;
+                try {
+                    await member.setNickname(newNickname);
+                } catch (error) {
+                    console.error('Error setting nickname:', error);
+                    return await interaction.editReply({
+                        content: 'Visitor role assigned, but I could not change your nickname. Please contact an admin.',
+                    });
+                }
 
-            // Reset the nickname to the user's default username
-            try {
-                await member.setNickname(null); // Clears the nickname, reverting to default username
-                console.log(`Nickname cleared for ${member.user.tag}`);
-            } catch (error) {
-                console.error('Error clearing nickname:', error);
-                return await interaction.reply({
-                    content: 'Visitor role assigned, but I could not clear your nickname. Please contact an admin.',
-                    ephemeral: true,
+                // Send a welcome message
+                if (visitorChannel) {
+                    await visitorChannel.send(`👀 **${member.user}** is looking around. Welcome!`);
+                }
+
+                await interaction.editReply({
+                    content: 'You now have Visitor access!',
+                });
+
+                /**********************************************************************/
+                // Handle Envoy Access
+            } else if (customId === 'envoy_access') {
+                const modal = new ModalBuilder()
+                    .setCustomId('envoy_modal')
+                    .setTitle('Envoy Information')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('ingame_name')
+                                .setLabel('Enter your in-game name:')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('guild_name')
+                                .setLabel('Enter your guild name:')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        )
+                    );
+
+                await interaction.showModal(modal);
+            }
+        } catch (error) {
+            console.error('Error handling guild access button:', error);
+            if (!interaction.replied) {
+                await interaction.editReply({
+                    content: 'Something went wrong while processing your request. Please try again later.',
                 });
             }
-
-            // Update the user's nickname to include "Visitor"
-            const suffix = ' | Visitor';
-            let currentNickname = member.user.username;
-
-            // Ensure the final nickname is 32 characters or fewer
-            if (currentNickname.length + suffix.length > 32) {
-                const maxNameLength = 32 - suffix.length; // Maximum allowable characters for the base name
-                currentNickname = currentNickname.slice(0, maxNameLength).trim(); // Truncate and trim extra whitespace
-            }
-
-            const newNickname = `${currentNickname}${suffix}`;
-            try {
-                await member.setNickname(newNickname);
-            } catch (error) {
-                console.error('Error setting nickname:', error);
-                return await interaction.reply({
-                    content: 'Visitor role assigned, but I could not change your nickname. Please contact an admin.',
-                    ephemeral: true,
-                });
-            }
-
-            // Send a welcome message to the visitor channel
-            if (visitorChannel) {
-                await visitorChannel.send(
-                    `👀 **${member.user}** is looking around. Welcome!`
-                );
-            }
-
-            await interaction.reply({ content: 'You now have Visitor access!', ephemeral: true });
-
-        /**********************************************************************/
-        // Handle Envoy Access
-
-        } else if (customId === 'envoy_access') {
-            const modal = new ModalBuilder()
-                .setCustomId('envoy_modal')
-                .setTitle('Envoy Information')
-                .addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('ingame_name')
-                            .setLabel('Enter your in-game name:')
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('guild_name')
-                            .setLabel('Enter your guild name:')
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    )
-                );
-            await interaction.showModal(modal);
         }
     },
 };
