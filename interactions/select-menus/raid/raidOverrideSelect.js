@@ -1,4 +1,16 @@
+/**
+ * @file raidOverrideSelect.js
+ * @description Handles override select menu logic for assigning bosses to raid runs in Discord raid events.
+ * @author Aardenfell
+ * @since 2.3.0
+ * @version 2.5.0
+ */
+
+/**********************************************************************/
+// Required Modules and Utilities
+
 const { EmbedBuilder } = require('discord.js');
+const { buildOverrideEmbed } = require('../../buttons/raid/pollInteractionButtons.js');
 const pollHelpers = require('../../../utils/pollHelpers.js');
 const path = require('path');
 const fs = require('fs');
@@ -6,7 +18,14 @@ const fs = require('fs');
 // Path to raid sign-ups data
 const signUpDataPath = path.join(__dirname, '../../../data/raidSignUps.json');
 
-// Helper functions to load and save data
+/**********************************************************************/
+// Helper Functions
+
+/**
+ * @function loadSignUpData
+ * @description Loads raid sign-up data from the JSON file.
+ * @returns {Array} The sign-up data array.
+ */
 const loadSignUpData = () => {
     try {
         return JSON.parse(fs.readFileSync(signUpDataPath, 'utf8')) || [];
@@ -16,6 +35,11 @@ const loadSignUpData = () => {
     }
 };
 
+/**
+ * @function saveSignUpData
+ * @description Saves raid sign-up data to the JSON file.
+ * @param {Array} data - The data to save.
+ */
 const saveSignUpData = (data) => {
     try {
         fs.writeFileSync(signUpDataPath, JSON.stringify(data, null, 2));
@@ -23,6 +47,9 @@ const saveSignUpData = (data) => {
         console.error('Failed to save sign-up data:', error);
     }
 };
+
+/**********************************************************************/
+// Interaction Handler
 
 module.exports = {
     id: /^override_select_/, // Match all interactions starting with "override_select_"
@@ -36,8 +63,10 @@ module.exports = {
         console.log('Executing override select menu handler.');
         console.log('Interaction customId:', interaction.customId);
 
+        // Parse interaction details
         const [prefix, selectType, raidDay, runIndex, messageId] = interaction.customId.split('_');
 
+        // Load relevant data
         const signUpData = loadSignUpData();
         const dayData = signUpData.find(data => data.messageId === messageId);
 
@@ -66,7 +95,7 @@ module.exports = {
         console.log('Raid day:', raidDay);
         console.log('Run index:', runIndex);
 
-        const index = parseInt(runIndex, 10); // Ensure index is an integer
+        const index = parseInt(runIndex, 10);
         if (isNaN(index) || index < 0 || index >= runs) {
             console.error('Invalid run index:', runIndex);
             return interaction.reply({
@@ -75,7 +104,7 @@ module.exports = {
             });
         }
 
-        // Ensure dayData.selectedBosses is initialized correctly
+        // Ensure dayData.selectedBosses is initialized
         if (!Array.isArray(dayData.selectedBosses)) {
             dayData.selectedBosses = Array(runs).fill('matchmake');
         }
@@ -86,13 +115,12 @@ module.exports = {
         // Save the updated data
         saveSignUpData(signUpData);
 
-        // Fetch voted bosses with voters
+        // Generate display data
         const votedBosses = poll.bosses
             .filter(boss => boss.voters.length > 0)
             .map(boss => `**${boss.name}** - Voters: ${boss.voters.map(voter => `<@${voter}>`).join(', ')}`)
             .join('\n') || 'No votes yet.';
 
-        // Fetch signed-in users
         const signedInUsers = dayData.signedIn
             .map(userId => `<@${userId}>`)
             .join(', ') || 'No users signed in yet.';
@@ -111,11 +139,11 @@ module.exports = {
             )
             .setColor('Yellow');
 
-        // Update the message with the enhanced embed
+        // Update the interaction message
         await interaction.update({
             content: "",
-            embeds: [overrideEmbed],
-            components: interaction.message.components, // Retain the original components
+            embeds: [buildOverrideEmbed(raidDay, poll, dayData)],
+            components: interaction.message.components, // Retain original components
         });
 
         console.log('Override selections updated successfully.');

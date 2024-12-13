@@ -2,7 +2,7 @@
  * @file buttonInteraction.js
  * @description Handles button interactions for various commands and features in the Discord bot.
  * @since 1.0.0
- * @version 2.2.0
+ * @version 2.5.0
  */
 
 /**********************************************************************/
@@ -62,18 +62,26 @@ module.exports = {
         const mainAction = prefix;
 
         // Raid Handling
-        if (['signUp', 'signIn', 'close', 'lock', 'override'].includes(mainAction)) {
+        if (
+            ['signUp', 'signIn', 'close', 'lock', 'override'].includes(mainAction) || 
+            customId.startsWith('override_next') || 
+            customId.startsWith('override_previous')
+        ) {
+            console.log(`[DEBUG] Handling raid button: ${customId}`);
             const raidHandler = client.buttonCommands.get('raid_day');
             if (raidHandler) {
                 try {
+                    console.log(`[DEBUG] Found raidHandler for: ${customId}`);
                     return await raidHandler.execute(interaction);
                 } catch (err) {
                     console.error('Error executing raid button:', err);
                     return await interaction.reply({
-                        content: "There was an issue processing your raid sign-up. Please try again.",
+                        content: "There was an issue processing your raid action. Please try again.",
                         ephemeral: true,
                     });
                 }
+            } else {
+                console.error(`[DEBUG] No raidHandler found for: ${customId}`);
             }
         // Vote Handling
         } else if (mainAction === 'vote') {
