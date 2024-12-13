@@ -136,3 +136,8 @@ data/guild2_bosses.json
 data/undefined_bosses.json
 data/guild1_bosses.json
 data/guild1_allocationHistory.json
+data/backup/pointsBackup_*
+data/backup/add-to-task-scheduler.js
+data/backup/backup.js
+data/backup/remove-from-task-scheduler.js
+data/backup/run-backup.vbs
