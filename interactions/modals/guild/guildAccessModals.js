@@ -67,6 +67,7 @@ module.exports = {
                 'Longbow': 'Bow',
                 'Wand & Tome': 'Wand',
                 'Greatsword': 'GS',
+                'Spear': 'Spear',
             };
 
             // Parse, clean up, and truncate weapon roles
