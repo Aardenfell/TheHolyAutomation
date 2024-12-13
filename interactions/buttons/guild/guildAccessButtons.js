@@ -3,7 +3,7 @@
  * @description Handles guild access interactions, such as new recruit, visitor, or envoy access.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.5.0
  */
 
 /**********************************************************************/
