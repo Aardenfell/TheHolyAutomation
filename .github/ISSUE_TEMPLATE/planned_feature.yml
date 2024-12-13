@@ -12,15 +12,6 @@ body:
         >
         > Submissions by unauthorized users may be closed.
 
-  - type: input
-    id: feature-title
-    attributes:
-      label: Feature Title
-      description: Provide a brief, descriptive title for the planned feature.
-      placeholder: "e.g., Add multi-language support."
-    validations:
-      required: true
-
   - type: textarea
     id: feature-summary
     attributes:
