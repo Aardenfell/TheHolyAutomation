@@ -329,7 +329,7 @@ async function distributePointsByRarity(participants, rarity, client, isGuildRai
 
   if (numEligibleParticipants > 0) {
     // Calculate points per participant and total distributed points
-    const pointsPerParticipant = parseFloat((totalPoints / numEligibleParticipants).toFixed(2)); // Round for clarity
+    let pointsPerParticipant = parseFloat((totalPoints / numEligibleParticipants).toFixed(2)); // Round for clarity
 
     // Ensure the points per participant are at least the minimum threshold
     if (pointsPerParticipant < minPoints) {
