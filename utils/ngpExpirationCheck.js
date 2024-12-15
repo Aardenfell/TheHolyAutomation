@@ -12,6 +12,7 @@
 // Import necessary handlers for expiration checks.
 const { handleNGPExpiration } = require('./ngpHelpers');
 const { handlePollExpiration } = require('./pollHelpers');
+const { checkScheduledEvents } = require('./eventChecker');
 
 /**********************************************************************/
 // Expiration Check Function
@@ -22,13 +23,10 @@ const { handlePollExpiration } = require('./pollHelpers');
  * @param {object} client - The Discord client object.
  * @param {number} [intervalMs=1000] - The interval in milliseconds for checking expiration (default is 1 second).
  */
-function startExpirationCheck(client, intervalMs = 1000) {
+function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalMs = 60000) {
+    // Interval for NGP and poll expiration checks (every second)
     setInterval(async () => {
         const currentTime = Math.floor(Date.now() / 1000); // Current time in Unix seconds
-
-        // Debugging: Log the current time of expiration checks if needed.
-        // console.log(`Checking for expired events and polls at: ${new Date().toLocaleString()}`);
-        // console.log(`Unix time: ${currentTime}`);
 
         // Run the expiration handler for NGP events.
         await handleNGPExpiration(client, currentTime);
@@ -36,7 +34,13 @@ function startExpirationCheck(client, intervalMs = 1000) {
         // Run the expiration handler for polls.
         await handlePollExpiration(client, currentTime);
     }, intervalMs);
+
+    // Interval for scheduled events check (every minute)
+    setInterval(async () => {
+        await checkScheduledEvents(client);
+    }, scheduledEventIntervalMs);
 }
+
 
 /**********************************************************************/
 // Module Export
