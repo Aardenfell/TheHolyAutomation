@@ -71,27 +71,39 @@ async function processToBeScheduled(client) {
                 // Calculate the new scheduled time
                 const newScheduledTime = calculateNextTime(scheduledTime, event.frequency);
 
-                // Schedule the event via Discord API
-                const guild = client.guilds.cache.first();
-                if (guild) {
-                    // Calculate scheduled end time by adding duration to the new scheduled start time
-                    const scheduledEndTime = new Date(newScheduledTime.getTime() + event.duration * 60 * 1000);
+                // Ensure the event isn't already scheduled for the new time
+                const isAlreadyScheduled = updatedEvents.some(
+                    (e) =>
+                        e.name === event.name &&
+                        new Date(e.scheduledTime).getTime() === newScheduledTime.getTime()
+                );
 
-                    await guild.scheduledEvents.create({
-                        name: event.name,
-                        scheduledStartTime: newScheduledTime,
-                        scheduledEndTime,
-                        privacyLevel: 2, // Guild-only
-                        entityType: event.location === 'N/A' ? 2 : 3, // Voice or External
-                        entityMetadata: event.location === 'N/A' ? undefined : { location: event.location },
-                        description: event.description,
-                    });
+                if (!isAlreadyScheduled) {
+                    // Schedule the event via Discord API
+                    const guild = client.guilds.cache.first();
+                    if (guild) {
+                        const scheduledEndTime = new Date(
+                            newScheduledTime.getTime() + event.duration * 60 * 1000
+                        );
 
-                    console.log(`[SCHEDULER] Scheduled event "${event.name}" for ${newScheduledTime.toLocaleString()} with end time ${scheduledEndTime.toLocaleString()}..`);
+                        await guild.scheduledEvents.create({
+                            name: event.name,
+                            scheduledStartTime: newScheduledTime,
+                            scheduledEndTime,
+                            privacyLevel: 2, // Guild-only
+                            entityType: event.location === 'N/A' ? 2 : 3, // Voice or External
+                            entityMetadata: event.location === 'N/A' ? undefined : { location: event.location },
+                            description: event.description,
+                        });
+
+                        console.log(
+                            `[SCHEDULER] Scheduled event "${event.name}" for ${newScheduledTime.toLocaleString()} with end time ${scheduledEndTime.toLocaleString()}..`
+                        );
+                    }
+
+                    // Update the event's scheduled time
+                    event.scheduledTime = newScheduledTime.toISOString();
                 }
-
-                // Update the event's scheduled time
-                event.scheduledTime = newScheduledTime.toISOString();
             }
 
             // Add the event (updated or not) to the list
@@ -104,5 +116,8 @@ async function processToBeScheduled(client) {
         console.error('[SCHEDULER] Error processing to-be-scheduled events:', error);
     }
 }
+
+module.exports = { processToBeScheduled };
+
 
 module.exports = { processToBeScheduled };
