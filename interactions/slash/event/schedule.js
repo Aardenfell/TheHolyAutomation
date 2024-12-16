@@ -157,49 +157,49 @@ module.exports = {
                 });
             }
 
-            // Schedule one-time events directly
-            if (frequency === 'none') {
-                const guild = interaction.guild;
-                if (!guild) {
-                    return interaction.reply({
-                        content: 'This command can only be used within a server.',
-                        ephemeral: true,
-                    });
-                }
-
-                const createdEvent = await guild.scheduledEvents.create({
-                    name,
-                    scheduledStartTime,
-                    scheduledEndTime,
-                    privacyLevel: 2, // Guild only
-                    entityType: location === 'N/A' ? 2 : 3, // Voice or External
-                    entityMetadata: location === 'N/A' ? undefined : { location },
-                    description,
-                });
-
+            // Schedule the event
+            const guild = interaction.guild;
+            if (!guild) {
                 return interaction.reply({
-                    content: `Event "${createdEvent.name}" scheduled successfully for ${scheduledStartTime.toLocaleString()}!`,
+                    content: 'This command can only be used within a server.',
+                    ephemeral: true,
                 });
             }
 
-            // Save custom frequency events
-            const eventId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            const eventData = {
-                id: eventId,
+            const createdEvent = await guild.scheduledEvents.create({
                 name,
+                scheduledStartTime,
+                scheduledEndTime,
+                privacyLevel: 2, // Guild only
+                entityType: location === 'N/A' ? 2 : 3, // Voice or External
+                entityMetadata: location === 'N/A' ? undefined : { location },
                 description,
-                scheduledTime: scheduledStartTime.toISOString(),
-                duration,
-                frequency,
-                location,
-                createdBy: interaction.user.id,
-            };
+            });
 
-            saveToBeScheduled(eventData);
+            // Save custom frequency events
+            if (frequency !== 'none') {
+                const eventId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                const eventData = {
+                    id: eventId,
+                    name,
+                    description,
+                    scheduledTime: scheduledStartTime.toISOString(),
+                    duration,
+                    frequency,
+                    location,
+                    createdBy: interaction.user.id,
+                };
+
+                saveToBeScheduled(eventData);
+
+                return interaction.reply({
+                    content: `Event "${name}" scheduled successfully for ${scheduledStartTime.toLocaleString()}! Saved for custom scheduling with frequency: ${frequency}.`,
+                    ephemeral: true,
+                });
+            }
 
             return interaction.reply({
-                content: `Event "${name}" saved for custom scheduling with frequency: ${frequency}.`,
-                ephemeral: true,
+                content: `Event "${createdEvent.name}" scheduled successfully for ${scheduledStartTime.toLocaleString()}!`,
             });
         } catch (error) {
             console.error('Error creating event:', error);
