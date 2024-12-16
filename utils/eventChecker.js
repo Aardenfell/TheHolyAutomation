@@ -30,15 +30,15 @@ const entityTypeMap = {
 
 /**
  * @function saveEventData
- * @description Writes event data to a JSON file with BigInt values safely converted to strings.
+ * @description Writes event data to a JSON file.
  * @param {Array} eventData - Array of event objects to save.
  */
 function saveEventData(eventData) {
-    const safeData = JSON.stringify(eventData, (_, value) =>
-        typeof value === 'bigint' ? value.toString() : value, // Convert BigInt to string
-        2
-    );
-    fs.writeFileSync(eventDataPath, safeData, 'utf-8');
+    const sanitizedData = JSON.stringify(eventData, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value // Convert BigInt to string
+    , 2);
+
+    fs.writeFileSync(eventDataPath, sanitizedData, 'utf-8');
     console.log(`[EVENT CHECKER] Saved event data to ${eventDataPath}`);
 }
 
@@ -75,51 +75,25 @@ async function checkScheduledEvents(client) {
 
             // Build the event data object
             const eventObject = {
-                id: event.id,
-                guildId: event.guildId,
+                id: event.id.toString(),
+                guildId: event.guildId.toString(),
                 name: event.name,
                 description: event.description || 'No description provided.',
                 status,
-                channelId: event.channelId || 'N/A',
+                channelId: event.channelId ? event.channelId.toString() : 'N/A',
                 entityType: {
                     name: entityTypeName,
                     value: event.entityType,
                 },
                 location: event.entityType === 3 ? location : 'N/A',
                 privacyLevel: event.privacyLevel,
-                creatorId: event.creatorId,
+                creatorId: event.creatorId ? event.creatorId.toString() : 'N/A',
                 scheduledStartTimestamp: event.scheduledStartTimestamp || null,
                 scheduledEndTimestamp: event.scheduledEndTimestamp || null,
                 url: event.url,
                 interestedUsers: {
                     count: event.userCount || 0,
                     users: interestedUsers,
-                },
-                fullObject: {
-                    channel: event.channel,
-                    channelId: event.channelId,
-                    client: event.client,
-                    createdAt: event.createdAt,
-                    createdTimestamp: event.createdTimestamp,
-                    creator: event.creator,
-                    description: event.description,
-                    entityId: event.entityId,
-                    entityMetadata: event.entityMetadata,
-                    entityType: event.entityType,
-                    guild: event.guild,
-                    guildId: event.guildId,
-                    id: event.id,
-                    image: event.image,
-                    name: event.name,
-                    partial: event.partial,
-                    privacyLevel: event.privacyLevel,
-                    scheduledEndAt: event.scheduledEndAt,
-                    scheduledEndTimestamp: event.scheduledEndTimestamp,
-                    scheduledStartAt: event.scheduledStartAt,
-                    scheduledStartTimestamp: event.scheduledStartTimestamp,
-                    status: event.status,
-                    url: event.url,
-                    userCount: event.userCount,
                 },
             };
 
