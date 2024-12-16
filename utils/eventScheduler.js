@@ -64,6 +64,45 @@ async function initializeScheduledEvents(client) {
 }
 
 /**
+ * @function saveRescheduledEvent
+ * @description Saves rescheduled event data in the same format as `eventChecker.js`.
+ * @param {object} event - The event data to save.
+ */
+function saveRescheduledEvent(event) {
+    const scheduledEvents = loadJson(scheduledEventsPath);
+
+    const eventObject = {
+        id: event.id || Date.now().toString(), // Fallback ID
+        guildId: event.guildId || 'Unknown',
+        name: event.name,
+        description: event.description || 'No description provided.',
+        status: 'SCHEDULED',
+        channelId: event.channelId || 'N/A',
+        entityType: {
+            name: event.location === 'N/A' ? 'VOICE' : 'EXTERNAL',
+            value: event.location === 'N/A' ? 2 : 3,
+        },
+        location: event.location,
+        privacyLevel: 2,
+        scheduledStartTimestamp: event.scheduledTime,
+        scheduledEndTimestamp: event.scheduledEndTime,
+    };
+
+    // Update or add the rescheduled event
+    const existingIndex = scheduledEvents.findIndex(
+        (e) => e.name === event.name && e.scheduledStartTimestamp === eventObject.scheduledStartTimestamp
+    );
+
+    if (existingIndex !== -1) {
+        scheduledEvents[existingIndex] = eventObject;
+    } else {
+        scheduledEvents.push(eventObject);
+    }
+
+    saveJson(scheduledEventsPath, scheduledEvents);
+}
+
+/**
  * @function processToBeScheduled
  * @description Background process to check and schedule events.
  * @param {object} client - The Discord client object.
@@ -113,9 +152,16 @@ async function processToBeScheduled(client) {
                         console.log(
                             `[SCHEDULER] Scheduled event "${event.name}" for ${newScheduledTime.toLocaleString()} with end time ${scheduledEndTime.toLocaleString()}..`
                         );
+
+                        // Save the rescheduled event to the `scheduledEvents.json`
+                        saveRescheduledEvent({
+                            ...event,
+                            scheduledTime: newScheduledTime.toISOString(),
+                            scheduledEndTime: scheduledEndTime.toISOString(),
+                        });
                     }
 
-                    // Update the event's scheduled time
+                    // Update the event's scheduled time in `tobescheduled.json`
                     event.scheduledTime = newScheduledTime.toISOString();
                 } else {
                     console.log(`[SCHEDULER] Event "${event.name}" is already scheduled for ${newScheduledTime.toLocaleString()}. Skipping.`);
