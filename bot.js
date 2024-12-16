@@ -54,7 +54,7 @@ const eventFiles = fs
 for (const file of eventFiles) {
 	const event = require(`./events/${file}`);
 
-	console.log(`✅ Adding listener for event: ${event.name} from file: ${file}`);
+	console.log(`✅ [BOT] Adding listener for event: ${event.name} from file: ${file}`);
 	if (event.once) {
 		client.once(event.name, (...args) => event.execute(...args, client));
 	} else {
@@ -303,16 +303,20 @@ for (const folder of triggerFolders) {
 // Misc Startup Functions
 
 const { initializeScheduledEvents } = require('./utils/eventScheduler');
-client.once('ready', async () => {
-    await initializeScheduledEvents(client);
-});
-
-// Start timer
 const { startExpirationCheck } = require('./utils/ngpExpirationCheck.js');
 
-// Start the expiration check when the bot is ready
-client.once('ready', () => {
-    startExpirationCheck(client); 
+client.once('ready', async () => {
+    console.log('[BOT] Starting initialization process...');
+
+    // Initialize scheduled events
+    await initializeScheduledEvents(client);
+    console.log(' ✅ [BOT] Scheduled events initialization complete.');
+
+    // Start the expiration check
+    console.log('[BOT] Starting expiration check...');
+    startExpirationCheck(client);
+
+    console.log('✅ [BOT] All startup processes completed.');
 });
 
 const { handleBidMessage } = require('./utils/bidHandler.js');
