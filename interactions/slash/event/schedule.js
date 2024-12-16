@@ -49,6 +49,12 @@ module.exports = {
                 .setDescription('The time of the event (HH:MM in 24-hour format).')
                 .setRequired(true)
         )
+        .addIntegerOption(option =>
+            option
+                .setName('duration')
+                .setDescription('The duration of the event in minutes (e.g., 120 for 2 hours).')
+                .setRequired(true)
+        )
         .addStringOption(option =>
             option
                 .setName('frequency')
@@ -64,7 +70,8 @@ module.exports = {
         .addStringOption(option =>
             option
                 .setName('location')
-                .setDescription('The location of the event (optional).')
+                .setDescription('The location of the event.')
+                .setRequired(true)
         )
         .addStringOption(option =>
             option
@@ -77,9 +84,17 @@ module.exports = {
             const name = interaction.options.getString('name');
             const dateInput = interaction.options.getString('date');
             const timeInput = interaction.options.getString('time');
+            const duration = interaction.options.getInteger('duration');
             const frequency = interaction.options.getString('frequency');
             const location = interaction.options.getString('location') || 'N/A';
             const description = interaction.options.getString('description') || 'No description provided.';
+
+            if (duration <= 0) {
+                return interaction.reply({
+                    content: 'Invalid duration. Please provide a duration greater than 0 minutes.',
+                    ephemeral: true,
+                });
+            }
 
             // Parse the date input
             const dateParts = dateInput.split('/');
@@ -123,26 +138,26 @@ module.exports = {
             }
 
             // Combine date and time into an ISO8601 timestamp
-            const eventDate = new Date(year, month, day, hour, minute);
-            if (isNaN(eventDate.getTime())) {
+            const scheduledStartTime = new Date(year, month, day, hour, minute);
+            if (isNaN(scheduledStartTime.getTime())) {
                 return interaction.reply({
                     content: 'Invalid date or time. Please ensure both are valid.',
                     ephemeral: true,
                 });
             }
 
+            // Calculate end time
+            const scheduledEndTime = new Date(scheduledStartTime.getTime() + duration * 60 * 1000);
+
             // Check if the combined date is in the past
-            if (eventDate < new Date()) {
+            if (scheduledStartTime < new Date()) {
                 return interaction.reply({
                     content: 'You cannot schedule an event in the past.',
                     ephemeral: true,
                 });
             }
 
-            // Use the formatted timestamp for scheduling
-            const isoTimestamp = eventDate.toISOString();
-
-            // Native event creation logic or saving to `tobescheduled.json` remains the same
+            // Schedule one-time events directly
             if (frequency === 'none') {
                 const guild = interaction.guild;
                 if (!guild) {
@@ -154,7 +169,8 @@ module.exports = {
 
                 const createdEvent = await guild.scheduledEvents.create({
                     name,
-                    scheduledStartTime: eventDate,
+                    scheduledStartTime,
+                    scheduledEndTime,
                     privacyLevel: 2, // Guild only
                     entityType: location === 'N/A' ? 2 : 3, // Voice or External
                     entityMetadata: location === 'N/A' ? undefined : { location },
@@ -162,17 +178,18 @@ module.exports = {
                 });
 
                 return interaction.reply({
-                    content: `Event "${createdEvent.name}" scheduled successfully for ${eventDate.toLocaleString()}!`,
+                    content: `Event "${createdEvent.name}" scheduled successfully for ${scheduledStartTime.toLocaleString()}!`,
                 });
             }
 
-            // Custom frequency logic remains unchanged
+            // Save custom frequency events
             const eventId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             const eventData = {
                 id: eventId,
                 name,
                 description,
-                scheduledTime: isoTimestamp,
+                scheduledTime: scheduledStartTime.toISOString(),
+                duration,
                 frequency,
                 location,
                 createdBy: interaction.user.id,
