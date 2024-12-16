@@ -30,11 +30,15 @@ const entityTypeMap = {
 
 /**
  * @function saveEventData
- * @description Writes event data to a JSON file.
+ * @description Writes event data to a JSON file with BigInt values safely converted to strings.
  * @param {Array} eventData - Array of event objects to save.
  */
 function saveEventData(eventData) {
-    fs.writeFileSync(eventDataPath, JSON.stringify(eventData, null, 2), 'utf-8');
+    const safeData = JSON.stringify(eventData, (_, value) =>
+        typeof value === 'bigint' ? value.toString() : value, // Convert BigInt to string
+        2
+    );
+    fs.writeFileSync(eventDataPath, safeData, 'utf-8');
     console.log(`[EVENT CHECKER] Saved event data to ${eventDataPath}`);
 }
 
