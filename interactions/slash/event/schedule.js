@@ -6,6 +6,10 @@
  * @version inDev
  */
 
+// TODO: Store pings/roles in event desc to be used later
+// desc can be parsed for role pings to be used on announcements
+
+
 const { SlashCommandBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -75,8 +79,8 @@ module.exports = {
         )
         .addStringOption(option =>
             option
-                .setName('description')
-                .setDescription('A description for the event (optional).')
+                .setName('ping_roles')
+                .setDescription('Mention roles to ping for the event, separated by spaces (e.g., @Role1 @Role2).')
         ),
 
     async execute(interaction) {
@@ -87,7 +91,7 @@ module.exports = {
             const duration = interaction.options.getInteger('duration');
             const frequency = interaction.options.getString('frequency');
             const location = interaction.options.getString('location') || 'N/A';
-            const description = interaction.options.getString('description') || 'No description provided.';
+            const pingRoles = interaction.options.getString('ping_roles') || '';
 
             if (duration <= 0) {
                 return interaction.reply({
@@ -156,6 +160,9 @@ module.exports = {
                     ephemeral: true,
                 });
             }
+
+            // Format the description with role pings
+            const description = `Announce to:\n${pingRoles.split(' ').join('\n')}`;
 
             // Schedule the event
             const guild = interaction.guild;
