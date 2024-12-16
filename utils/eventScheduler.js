@@ -112,69 +112,79 @@ async function processToBeScheduled(client) {
         const toBeScheduled = loadJson(toBeScheduledPath);
         const scheduledEvents = loadJson(scheduledEventsPath); // Use local cache
         const now = new Date();
+        const updatedToBeScheduled = [];
 
         for (const event of toBeScheduled) {
             const scheduledTime = new Date(event.scheduledTime);
             const durationMs = event.duration * 60 * 1000; // Convert minutes to milliseconds
             const eventEndTime = new Date(scheduledTime.getTime() + durationMs);
 
-            // If the current time has passed the event's end time, reschedule it
-            if (now > eventEndTime) {
+            // Skip if event has already been rescheduled to the next occurrence
+            const nextScheduledTime = calculateNextTime(scheduledTime, event.frequency);
+            const isNextScheduled = scheduledEvents.some(
+                (scheduledEvent) =>
+                    scheduledEvent.name === event.name &&
+                    new Date(scheduledEvent.scheduledStartTimestamp).getTime() === nextScheduledTime.getTime()
+            );
+
+            if (now > eventEndTime && !isNextScheduled) {
                 console.log(`[SCHEDULER] Rescheduling event: ${event.name}`);
 
                 // Calculate the new scheduled time
                 const newScheduledTime = calculateNextTime(scheduledTime, event.frequency);
-
-                // Check if the event is already scheduled for the new time
-                const isAlreadyScheduled = scheduledEvents.some(
-                    (scheduledEvent) =>
-                        scheduledEvent.name === event.name &&
-                        new Date(scheduledEvent.scheduledStartTimestamp).getTime() === newScheduledTime.getTime()
+                const newScheduledEndTime = new Date(
+                    newScheduledTime.getTime() + event.duration * 60 * 1000
                 );
 
-                if (!isAlreadyScheduled) {
-                    const guild = client.guilds.cache.first();
-                    if (guild) {
-                        const scheduledEndTime = new Date(
-                            newScheduledTime.getTime() + event.duration * 60 * 1000
-                        );
+                const guild = client.guilds.cache.first();
+                if (guild) {
+                    await guild.scheduledEvents.create({
+                        name: event.name,
+                        scheduledStartTime: newScheduledTime,
+                        scheduledEndTime: newScheduledEndTime,
+                        privacyLevel: 2, // Guild-only
+                        entityType: event.location === 'N/A' ? 2 : 3, // Voice or External
+                        entityMetadata: event.location === 'N/A' ? undefined : { location: event.location },
+                        description: event.description,
+                    });
 
-                        await guild.scheduledEvents.create({
-                            name: event.name,
-                            scheduledStartTime: newScheduledTime,
-                            scheduledEndTime,
-                            privacyLevel: 2, // Guild-only
-                            entityType: event.location === 'N/A' ? 2 : 3, // Voice or External
-                            entityMetadata: event.location === 'N/A' ? undefined : { location: event.location },
-                            description: event.description,
-                        });
+                    console.log(
+                        `[SCHEDULER] Scheduled event "${event.name}" for ${newScheduledTime.toLocaleString()} with end time ${newScheduledEndTime.toLocaleString()}..`
+                    );
 
-                        console.log(
-                            `[SCHEDULER] Scheduled event "${event.name}" for ${newScheduledTime.toLocaleString()} with end time ${scheduledEndTime.toLocaleString()}..`
-                        );
-
-                        // Save the rescheduled event to the `scheduledEvents.json`
-                        saveRescheduledEvent({
-                            ...event,
-                            scheduledTime: newScheduledTime.toISOString(),
-                            scheduledEndTime: scheduledEndTime.toISOString(),
-                        });
-                    }
-
-                    // Update the event's scheduled time in `tobescheduled.json`
-                    event.scheduledTime = newScheduledTime.toISOString();
-                } else {
-                    console.log(`[SCHEDULER] Event "${event.name}" is already scheduled for ${newScheduledTime.toLocaleString()}. Skipping.`);
+                    // Add the rescheduled event to the scheduled events cache
+                    saveRescheduledEvent({
+                        id: event.id,
+                        name: event.name,
+                        description: event.description,
+                        scheduledStartTimestamp: newScheduledTime.toISOString(),
+                        scheduledEndTimestamp: newScheduledEndTime.toISOString(),
+                        duration: event.duration,
+                        frequency: event.frequency,
+                        location: event.location,
+                        createdBy: event.createdBy,
+                    });
                 }
-            }
+
+                // Update the event's scheduled time in `toBeScheduled`
+                event.scheduledTime = newScheduledTime.toISOString();
+            } 
+            // else {
+            //     console.log(
+            //         `[SCHEDULER] Event "${event.name}" is already scheduled for ${nextScheduledTime.toLocaleString()}. Skipping.`
+            //     );
+            // }
+
+            updatedToBeScheduled.push(event);
         }
 
-        // Save updated events back to the JSON file
-        saveJson(toBeScheduledPath, toBeScheduled);
+        // Save updated events back to the `toBeScheduled.json`
+        saveJson(toBeScheduledPath, updatedToBeScheduled);
     } catch (error) {
         console.error('[SCHEDULER] Error processing to-be-scheduled events:', error);
     }
 }
+
 
 module.exports = { processToBeScheduled, initializeScheduledEvents };
 
