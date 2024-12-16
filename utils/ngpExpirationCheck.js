@@ -13,6 +13,7 @@
 const { handleNGPExpiration } = require('./ngpHelpers');
 const { handlePollExpiration } = require('./pollHelpers');
 const { checkScheduledEvents } = require('./eventChecker');
+const { processToBeScheduled } = require('./eventScheduler');
 
 /**********************************************************************/
 // Expiration Check Function
@@ -33,6 +34,8 @@ function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalM
 
         // Run the expiration handler for polls.
         await handlePollExpiration(client, currentTime);
+
+        await processToBeScheduled(client);
     }, intervalMs);
 
     // Interval for scheduled events check (every minute)
