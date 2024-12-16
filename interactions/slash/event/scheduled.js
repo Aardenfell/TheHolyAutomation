@@ -9,13 +9,11 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const { checkScheduledEvents } = require('../../../utils/eventChecker');
 
-// Path to the JSON file containing event data
+// Path to the JSON file storing scheduled event data
 const eventDataPath = path.join(__dirname, '../../../data/scheduledEvents.json');
 
-/**
- * @description Slash command to display scheduled events.
- */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('scheduled')
@@ -27,41 +25,64 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            // Defer the reply to handle potential latency in reading data
             await interaction.deferReply();
 
-            // Check if the JSON file exists and read it
-            if (!fs.existsSync(eventDataPath)) {
-                return interaction.editReply('No scheduled events data found. Please try again later.');
+            let eventData;
+
+            // Attempt to read and parse the JSON data
+            try {
+                const rawData = fs.readFileSync(eventDataPath, 'utf-8');
+                eventData = JSON.parse(rawData);
+
+                // Handle the case of empty or malformed JSON data
+                if (!Array.isArray(eventData) || eventData.length === 0) {
+                    throw new Error('Empty or invalid event data.');
+                }
+            } catch (error) {
+                console.warn('[SCHEDULED] Event data is missing or invalid. Fetching fresh data...');
+                
+                // Run the event checker to fetch and save data
+                const client = interaction.client;
+                await checkScheduledEvents(client);
+
+                // Wait for a moment to ensure the file has been written
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Attempt to read the file again
+                const rawData = fs.readFileSync(eventDataPath, 'utf-8');
+                eventData = JSON.parse(rawData);
+
+                // If still empty, reply with a failure message
+                if (!Array.isArray(eventData) || eventData.length === 0) {
+                    return interaction.editReply('No scheduled events found for this server.');
+                }
             }
 
-            const eventData = JSON.parse(fs.readFileSync(eventDataPath, 'utf-8'));
-            if (eventData.length === 0) {
-                return interaction.editReply('No scheduled events found for this server.');
-            }
-
-            // Iterate through events and build embed output
+            // Process the event data into embeds
             const embeds = eventData.map(event => {
-                const startTime = event.scheduledStartTimestamp
-                    ? `<t:${event.scheduledStartTimestamp}:F>` // Discord timestamp
-                    : 'Not specified';
-                const endTime = event.scheduledEndTimestamp
-                    ? `<t:${event.scheduledEndTimestamp}:F>` // Discord timestamp
-                    : 'Not specified';
+                const { name, description, status, scheduledStartTimestamp, scheduledEndTimestamp, entityType, location, interestedUsers } = event;
 
-                const interestedUsers = event.interestedUsers?.users.join('\n') || 'No interested users.';
+                const startTime = scheduledStartTimestamp
+                    ? `<t:${Math.floor(scheduledStartTimestamp / 1000)}:F>`
+                    : 'Not specified';
+                const endTime = scheduledEndTimestamp
+                    ? `<t:${Math.floor(scheduledEndTimestamp / 1000)}:F>`
+                    : 'Not specified';
 
                 return new EmbedBuilder()
-                    .setTitle(event.name)
+                    .setTitle(name)
                     .setColor('Random')
-                    .setDescription(event.description || 'No description provided.')
+                    .setDescription(description || 'No description provided.')
                     .addFields(
-                        { name: 'Status', value: event.status, inline: true },
+                        { name: 'Status', value: status, inline: true },
                         { name: 'Start Time', value: startTime, inline: true },
                         { name: 'End Time', value: endTime, inline: true },
-                        { name: 'Entity Type', value: event.entityType.name, inline: true },
-                        { name: 'Location', value: event.location || 'N/A', inline: true },
-                        { name: `Interested Users (${event.interestedUsers?.count || '0'})`, value: interestedUsers }
+                        { name: 'Entity Type', value: entityType.name || 'Unknown', inline: true },
+                        { name: 'Location', value: location || 'N/A', inline: true },
+                        {
+                            name: `Interested Users (${interestedUsers.count || 0})`,
+                            value: interestedUsers.users.length > 0 ? interestedUsers.users.join('\n') : 'No interested users.',
+                        }
                     )
                     .setTimestamp();
             });
@@ -69,8 +90,8 @@ module.exports = {
             // Send the embeds in the reply
             await interaction.editReply({ embeds });
         } catch (error) {
-            console.error('Error fetching scheduled events from JSON:', error);
-            await interaction.editReply('An error occurred while fetching the scheduled events. Please try again later.');
+            console.error('Error executing /scheduled command:', error);
+            await interaction.editReply('An error occurred while fetching scheduled events. Please try again later.');
         }
     },
 };
