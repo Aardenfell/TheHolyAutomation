@@ -9,17 +9,29 @@
 const fs = require('fs');
 const path = require('path');
 
-// Path to the scheduled events JSON file
+// Paths to the JSON files
 const scheduledEventsPath = path.join(__dirname, '../data/scheduledEvents.json');
+const announcedEventsPath = path.join(__dirname, '../data/announcedEvents.json');
 
-/**
- * @function loadScheduledEvents
- * @description Loads the `scheduledEvents.json` file and parses its contents.
- * @returns {Array} Parsed event data from the JSON file.
- */
-function loadScheduledEvents() {
-    if (!fs.existsSync(scheduledEventsPath)) return [];
-    return JSON.parse(fs.readFileSync(scheduledEventsPath, 'utf-8'));
+// Load JSON file helper
+function loadJson(filePath) {
+    if (!fs.existsSync(filePath)) return [];
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+}
+
+// Save JSON file helper
+function saveJson(filePath, data) {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// Load announced events
+function loadAnnouncedEvents() {
+    return loadJson(announcedEventsPath);
+}
+
+// Save announced events
+function saveAnnouncedEvents(data) {
+    saveJson(announcedEventsPath, data);
 }
 
 /**
@@ -29,11 +41,15 @@ function loadScheduledEvents() {
  */
 async function processAnnouncements(client) {
     try {
-        const events = loadScheduledEvents();
+        const events = loadJson(scheduledEventsPath);
+        const announcedEvents = loadAnnouncedEvents();
         const now = Date.now();
 
         for (const event of events) {
             const timeUntilStart = event.scheduledStartTimestamp - now;
+
+            // Skip if already announced
+            if (announcedEvents.some((e) => e.id === event.id && e.announced)) continue;
 
             // Check if the event is scheduled to start in 5 minutes
             if (timeUntilStart > 0 && timeUntilStart <= 5 * 60 * 1000) {
@@ -43,7 +59,7 @@ async function processAnnouncements(client) {
                     continue;
                 }
 
-                const channelId = "1293412297968193616";
+                const channelId = event.channelId !== 'N/A' ? event.channelId : null;
                 const announcementChannel = channelId
                     ? guild.channels.cache.get(channelId)
                     : guild.systemChannel;
@@ -58,15 +74,38 @@ async function processAnnouncements(client) {
                 const pingMessage = rolePings.length > 0 ? rolePings.join(' ') : '';
 
                 // Send the announcement message
-                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "${event.name}" is starting soon!\n${event.url}`;
+                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "[${event.name}](${event.url})" is starting soon!\n`;
                 await announcementChannel.send(messageContent);
 
                 console.log(`[EVENT ANNOUNCE] Announced event "${event.name}" in channel "${announcementChannel.name}".`);
+
+                // Mark the event as announced
+                announcedEvents.push({ id: event.id, announced: true });
             }
         }
+
+        // Save updated announced events
+        saveAnnouncedEvents(announcedEvents);
     } catch (error) {
         console.error('[EVENT ANNOUNCE] Error processing event announcements:', error);
     }
 }
 
-module.exports = { processAnnouncements };
+/**
+ * @function cleanupAnnouncements
+ * @description Removes entries from `announcedEvents.json` that are no longer in `scheduledEvents.json`.
+ */
+function cleanupAnnouncements() {
+    const events = loadJson(scheduledEventsPath);
+    const announcedEvents = loadAnnouncedEvents();
+
+    const validIds = new Set(events.map((event) => event.id));
+    const cleanedAnnouncements = announcedEvents.filter((e) => validIds.has(e.id));
+
+    if (cleanedAnnouncements.length !== announcedEvents.length) {
+        console.log('[EVENT ANNOUNCE] Cleanup performed on announced events.');
+        saveAnnouncedEvents(cleanedAnnouncements);
+    }
+}
+
+module.exports = { processAnnouncements, cleanupAnnouncements };
