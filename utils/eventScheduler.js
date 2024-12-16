@@ -8,27 +8,31 @@
 
 const fs = require('fs');
 const path = require('path');
+const { checkScheduledEvents } = require('./eventChecker');
 
-// Path to the toBeScheduled JSON file
+// Path to the toBeScheduled and scheduledEvents JSON files
 const toBeScheduledPath = path.join(__dirname, '../data/tobescheduled.json');
+const scheduledEventsPath = path.join(__dirname, '../data/scheduledEvents.json');
 
 /**
- * @function loadToBeScheduled
- * @description Loads the `tobescheduled.json` file and parses its contents.
- * @returns {Array} Parsed event data from the JSON file.
+ * @function loadJson
+ * @description Generic function to load a JSON file.
+ * @param {string} filePath - Path to the JSON file.
+ * @returns {Array|Object} Parsed JSON data or empty array/object if file doesn't exist.
  */
-function loadToBeScheduled() {
-    if (!fs.existsSync(toBeScheduledPath)) return [];
-    return JSON.parse(fs.readFileSync(toBeScheduledPath, 'utf-8'));
+function loadJson(filePath) {
+    if (!fs.existsSync(filePath)) return [];
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 }
 
 /**
- * @function saveToBeScheduled
- * @description Saves updated events to the `tobescheduled.json` file.
- * @param {Array} events - The updated array of events to save.
+ * @function saveJson
+ * @description Generic function to save data to a JSON file.
+ * @param {string} filePath - Path to the JSON file.
+ * @param {Array|Object} data - Data to save.
  */
-function saveToBeScheduled(events) {
-    fs.writeFileSync(toBeScheduledPath, JSON.stringify(events, null, 2), 'utf-8');
+function saveJson(filePath, data) {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 /**
@@ -49,17 +53,28 @@ function calculateNextTime(current, frequency) {
 }
 
 /**
+ * @function initializeScheduledEvents
+ * @description Ensures the scheduled events cache is up-to-date when the bot starts.
+ * @param {object} client - The Discord client object.
+ */
+async function initializeScheduledEvents(client) {
+    console.log('[SCHEDULER] Initializing scheduled events cache...');
+    await checkScheduledEvents(client); // Updates `scheduledEvents.json`
+    console.log('[SCHEDULER] Scheduled events cache updated.');
+}
+
+/**
  * @function processToBeScheduled
  * @description Background process to check and schedule events.
  * @param {object} client - The Discord client object.
  */
 async function processToBeScheduled(client) {
     try {
-        const events = loadToBeScheduled();
-        const updatedEvents = [];
+        const toBeScheduled = loadJson(toBeScheduledPath);
+        const scheduledEvents = loadJson(scheduledEventsPath); // Use local cache
         const now = new Date();
 
-        for (const event of events) {
+        for (const event of toBeScheduled) {
             const scheduledTime = new Date(event.scheduledTime);
             const durationMs = event.duration * 60 * 1000; // Convert minutes to milliseconds
             const eventEndTime = new Date(scheduledTime.getTime() + durationMs);
@@ -71,15 +86,14 @@ async function processToBeScheduled(client) {
                 // Calculate the new scheduled time
                 const newScheduledTime = calculateNextTime(scheduledTime, event.frequency);
 
-                // Ensure the event isn't already scheduled for the new time
-                const isAlreadyScheduled = updatedEvents.some(
-                    (e) =>
-                        e.name === event.name &&
-                        new Date(e.scheduledTime).getTime() === newScheduledTime.getTime()
+                // Check if the event is already scheduled for the new time
+                const isAlreadyScheduled = scheduledEvents.some(
+                    (scheduledEvent) =>
+                        scheduledEvent.name === event.name &&
+                        new Date(scheduledEvent.scheduledStartTimestamp).getTime() === newScheduledTime.getTime()
                 );
 
                 if (!isAlreadyScheduled) {
-                    // Schedule the event via Discord API
                     const guild = client.guilds.cache.first();
                     if (guild) {
                         const scheduledEndTime = new Date(
@@ -103,21 +117,18 @@ async function processToBeScheduled(client) {
 
                     // Update the event's scheduled time
                     event.scheduledTime = newScheduledTime.toISOString();
+                } else {
+                    console.log(`[SCHEDULER] Event "${event.name}" is already scheduled for ${newScheduledTime.toLocaleString()}. Skipping.`);
                 }
             }
-
-            // Add the event (updated or not) to the list
-            updatedEvents.push(event);
         }
 
         // Save updated events back to the JSON file
-        saveToBeScheduled(updatedEvents);
+        saveJson(toBeScheduledPath, toBeScheduled);
     } catch (error) {
         console.error('[SCHEDULER] Error processing to-be-scheduled events:', error);
     }
 }
 
-module.exports = { processToBeScheduled };
+module.exports = { processToBeScheduled, initializeScheduledEvents };
 
-
-module.exports = { processToBeScheduled };

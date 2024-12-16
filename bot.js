@@ -300,6 +300,13 @@ for (const folder of triggerFolders) {
 	}
 }
 /**********************************************************************/
+// Misc Startup Functions
+
+const { initializeScheduledEvents } = require('./utils/eventScheduler');
+client.once('ready', async () => {
+    await initializeScheduledEvents(client);
+});
+
 // Start timer
 const { startExpirationCheck } = require('./utils/ngpExpirationCheck.js');
 
@@ -314,10 +321,9 @@ client.on('messageCreate', async (message) => {
     try {
         await handleBidMessage(message, client);
     } catch (error) {
-        console.error('Error handling bid message:', error);
+        console.error('[Bid] Error handling bid message:', error);
     }
 });
-
 
 
 // Login into your client application with bot's token.
