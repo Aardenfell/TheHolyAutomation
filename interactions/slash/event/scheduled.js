@@ -88,6 +88,7 @@ module.exports = {
             });
 
             // Send the embeds in the reply
+            // TODO: #18 /scheduled output causes DiscordAPIError[50035]: Invalid Form Body @Aardenfell
             await interaction.editReply({ embeds });
         } catch (error) {
             console.error('Error executing /scheduled command:', error);

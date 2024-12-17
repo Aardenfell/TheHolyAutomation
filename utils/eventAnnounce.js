@@ -74,7 +74,7 @@ async function processAnnouncements(client) {
                 const pingMessage = rolePings.length > 0 ? rolePings.join(' ') : '';
 
                 // Send the announcement message
-                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "[${event.name}](${event.url})" is starting soon!\n`;
+                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "[${event.name}](${event.url})" is starting soon!\n-# This feature is still in development`;
                 await announcementChannel.send(messageContent);
 
                 console.log(`[EVENT ANNOUNCE] Announced event "${event.name}" in channel "${announcementChannel.name}".`);
