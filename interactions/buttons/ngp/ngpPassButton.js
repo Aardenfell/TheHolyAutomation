@@ -137,7 +137,7 @@ module.exports = {
 
             // Notify the thread about the pass
             await thread.send({
-                content: `${userId} has passed.`,
+                content: `${userId} has rolled.`,
                 allowedMentions: { parse: [] },
             });
 
