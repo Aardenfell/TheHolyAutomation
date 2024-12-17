@@ -40,6 +40,8 @@ function saveAnnouncedEvents(data) {
  * @param {object} client - The Discord client object.
  */
 async function processAnnouncements(client) {
+    const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf-8'));
+
     try {
         const events = loadJson(scheduledEventsPath);
         const announcedEvents = loadAnnouncedEvents();
@@ -59,13 +61,12 @@ async function processAnnouncements(client) {
                     continue;
                 }
 
-                const channelId = event.channelId !== 'N/A' ? event.channelId : null;
-                const announcementChannel = channelId
-                    ? guild.channels.cache.get(channelId)
-                    : guild.systemChannel;
+                // Fetch the announcement thread using config
+                const threadId = config.channels.eventAnnounce; // Config field for thread ID
+                const thread = guild.channels.cache.get(threadId);
 
-                if (!announcementChannel || !announcementChannel.isTextBased()) {
-                    console.error(`[EVENT ANNOUNCE] Announcement channel not found or invalid for event "${event.name}".`);
+                if (!thread || !thread.isTextBased()) {
+                    console.error(`[EVENT ANNOUNCE] Announcement thread not found or invalid for event "${event.name}".`);
                     continue;
                 }
 
@@ -74,10 +75,10 @@ async function processAnnouncements(client) {
                 const pingMessage = rolePings.length > 0 ? rolePings.join(' ') : '';
 
                 // Send the announcement message
-                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "[${event.name}](${event.url})" is starting soon!\n-# This feature is still in development`;
-                await announcementChannel.send(messageContent);
+                const messageContent = `${pingMessage ? `${pingMessage}\n` : ''}The event "[${event.name}](${event.url})" is starting soon!`;
+                await thread.send(messageContent);
 
-                console.log(`[EVENT ANNOUNCE] Announced event "${event.name}" in channel "${announcementChannel.name}".`);
+                console.log(`[EVENT ANNOUNCE] Announced event "${event.name}" in thread "${thread.name}".`);
 
                 // Mark the event as announced
                 announcedEvents.push({ id: event.id, announced: true });

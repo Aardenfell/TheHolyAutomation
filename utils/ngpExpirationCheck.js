@@ -9,6 +9,10 @@
 /**********************************************************************/
 // Required Modules
 
+const fs = require('fs');
+const path = require('path');
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf-8'));
+
 // Import necessary handlers for expiration checks.
 const { handleNGPExpiration } = require('./ngpHelpers');
 const { handlePollExpiration } = require('./pollHelpers');
@@ -57,7 +61,7 @@ function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalM
 
         try {
             // Call processToBeScheduled
-            await processToBeScheduled(client);
+            await processToBeScheduled(client, config);
         } catch (error) {
             console.error('[SCHEDULER] Error during scheduled events processing:', error);
         } finally {
