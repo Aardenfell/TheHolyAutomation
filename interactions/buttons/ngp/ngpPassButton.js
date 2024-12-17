@@ -1,15 +1,14 @@
 /**
- * @file ngp_pass_interaction.js
+ * @file ngpPassButton.js
  * @description Handles the NGP pass interaction for events, allowing participants to pass on rolling for an item.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.6.2
  */
 
 /**********************************************************************/
 // Required Modules and Utilities
 
-// Required modules
 const fs = require('fs');
 const path = require('path');
 const { getNGPEventById, checkAndDeclareWinner } = require('../../../utils/ngpHelpers.js');
@@ -31,15 +30,24 @@ module.exports = {
      */
     async execute(interaction, client) {
         const [, , eventId] = interaction.customId.split('_');
-
-        // Fetch the event details by eventId
-        const event = getNGPEventById(eventId);
         const userId = `<@${interaction.user.id}>`;
 
         /**********************************************************************/
-        // Event Expiry and Participant Check
+        // Fetch Event Details
 
-        // Check if the event has expired or is no longer active
+        const event = getNGPEventById(eventId);
+
+        if (!event) {
+            console.error(`[ ERROR ] Event with ID ${eventId} not found.`);
+            return await interaction.reply({
+                content: 'This NGP event no longer exists or has been removed.',
+                ephemeral: true,
+            });
+        }
+
+        /**********************************************************************/
+        // Event Validation and Participant Check
+
         if (!event.active) {
             return await interaction.reply({
                 content: 'This NGP event has already expired and is no longer active.',
@@ -47,17 +55,13 @@ module.exports = {
             });
         }
 
-        // Ensure that participants array exists
-        if (!event.participants) {
-            event.participants = [];
-        }
+        if (!event.participants) event.participants = [];
 
         let participant;
 
-        // Check if it's a private event and the user is not allowed to participate
+        // Check for private event participation
         if (!event.is_open_ngp) {
             participant = event.participants.find(p => p.name === userId);
-
             if (!participant) {
                 return await interaction.reply({
                     content: 'You are not a participant in this private NGP event and cannot roll.',
@@ -65,21 +69,16 @@ module.exports = {
                 });
             }
         } else {
-            // For open events, find or add the participant
             participant = event.participants.find(p => p.name === userId);
 
             if (!participant) {
-                participant = {
-                    name: userId,
-                    roll_type: null,
-                    roll_value: null
-                };
+                participant = { name: userId, roll_type: null, roll_value: null };
                 event.participants.push(participant);
             }
         }
 
         /**********************************************************************/
-        // Check if User Has Already Rolled
+        // Prevent Duplicate Rolls
 
         if (participant.roll_value !== null) {
             return await interaction.reply({
@@ -88,7 +87,6 @@ module.exports = {
             });
         }
 
-        // Mark the participant as having passed
         participant.roll_type = 'Pass';
         participant.roll_value = 'Pass';
 
@@ -100,14 +98,15 @@ module.exports = {
         eventsData[eventIndex] = event;
         saveNGPEvents(eventsData);
 
-        // Send an ephemeral message to the user in the main channel
+        console.log(`[ NGP_PASS ] User ${interaction.user.id} passed on event ID ${eventId}.`);
+
         await interaction.reply({
             content: `You have chosen to pass on **${event.item}**`,
-            ephemeral: true
+            ephemeral: true,
         });
 
         /**********************************************************************/
-        // Handle Event Message Thread
+        // Thread Handling
 
         const messageId = event.message_id;
         let thread;
@@ -115,7 +114,7 @@ module.exports = {
         try {
             const message = await interaction.channel.messages.fetch(messageId);
 
-            // Safely fetch the thread or handle the error if it's already created
+            // Fetch or create thread
             thread = message.hasThread ? await message.thread.fetch() : null;
 
             if (!thread) {
@@ -125,20 +124,10 @@ module.exports = {
                         autoArchiveDuration: 60,
                         reason: `Thread for NGP event ${eventId}`,
                     });
-
-                    // Remove participants other than bot from the thread
-                    const botId = interaction.client.user.id;
-                    await thread.members.fetch();
-                    const participants = event.participants.map(p => p.name.replace(/[<@>]/g, ''));
-
-                    for (const member of thread.members.cache.values()) {
-                        if (participants.includes(member.id) && member.id !== botId) {
-                            await thread.members.remove(member.id);
-                        }
-                    }
+                    console.log(`[ THREAD ] Created thread for event ID ${eventId}.`);
                 } catch (threadError) {
                     if (threadError.code === 160004) {
-                        console.warn('Thread already exists for this message.');
+                        console.warn(`[ WARN ] Thread already exists for event ID ${eventId}.`);
                         thread = message.thread || await message.fetchThread();
                     } else {
                         throw threadError;
@@ -146,29 +135,26 @@ module.exports = {
                 }
             }
 
-            // Notify in the thread that the user has passed
-            if (thread) {
-                await thread.send({
-                    content: `${userId} has rolled.`,
-                    allowedMentions: { parse: [] },
-                });
+            // Notify the thread about the pass
+            await thread.send({
+                content: `${userId} has passed.`,
+                allowedMentions: { parse: [] },
+            });
 
-                // Remove the user from the thread if bidding is active
-                if (event.is_bidding) {
-                    try {
-                        await thread.members.remove(interaction.user.id);
-                        console.log(`Removed user ${interaction.user.id} from thread due to active bidding.`);
-                    } catch (err) {
-                        console.error(`Failed to remove user ${interaction.user.id} from thread:`, err);
-                    }
+            // Remove user from the thread if bidding is active
+            if (event.is_bidding) {
+                try {
+                    await thread.members.remove(interaction.user.id);
+                    console.log(`[ BIDDING ] Removed user ${interaction.user.id} from thread due to active bidding.`);
+                } catch (err) {
+                    console.error(`[ ERROR ] Failed to remove user ${interaction.user.id} from thread:`, err);
                 }
             }
 
             // Check and declare the winner after all participants have acted
             await checkAndDeclareWinner(eventId, interaction, client);
-
         } catch (error) {
-            console.error('Error fetching the message or creating thread:', error);
+            console.error(`[ ERROR ] Failed to handle thread for event ID ${eventId}:`, error);
             return await interaction.followUp({
                 content: 'Failed to create or update the thread. Please try again.',
                 ephemeral: true,
