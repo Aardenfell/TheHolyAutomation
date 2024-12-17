@@ -16,6 +16,7 @@ const path = require('path');
 
 // Path to the custom frequency events JSON file
 const toBeScheduledPath = path.join(__dirname, '../../../data/tobescheduled.json');
+const scheduledEventsPath = path.join(__dirname, '../../../data/scheduledEvents.json');
 
 /**
  * @function saveToBeScheduled
@@ -29,6 +30,20 @@ function saveToBeScheduled(event) {
     }
     events.push(event);
     fs.writeFileSync(toBeScheduledPath, JSON.stringify(events, null, 2));
+}
+
+/**
+ * @function saveToScheduledEvents
+ * @description Append scheduled events to the scheduledEvents.json cache.
+ * @param {object} event - The event data to save.
+ */
+function saveToScheduledEvents(event) {
+    let events = [];
+    if (fs.existsSync(scheduledEventsPath)) {
+        events = JSON.parse(fs.readFileSync(scheduledEventsPath, 'utf-8'));
+    }
+    events.push(event);
+    fs.writeFileSync(scheduledEventsPath, JSON.stringify(events, null, 2));
 }
 
 module.exports = {
@@ -183,11 +198,33 @@ module.exports = {
                 description,
             });
 
-            // Save custom frequency events
+            // Save event to scheduledEvents.json in the eventChecker format
+            const eventData = {
+                id: createdEvent.id.toString(),
+                guildId: guild.id,
+                name: createdEvent.name,
+                description: createdEvent.description || 'No description provided.',
+                status: 'SCHEDULED',
+                channelId: 'N/A',
+                entityType: {
+                    name: location === 'N/A' ? 'VOICE' : 'EXTERNAL',
+                    value: location === 'N/A' ? 2 : 3,
+                },
+                location,
+                privacyLevel: createdEvent.privacyLevel,
+                creatorId: interaction.user.id,
+                scheduledStartTimestamp: createdEvent.scheduledStartTimestamp,
+                scheduledEndTimestamp: createdEvent.scheduledEndTimestamp,
+                url: createdEvent.url,
+                interestedUsers: { count: 0, users: [] },
+            };
+
+            saveToScheduledEvents(eventData);
+
+            // Save custom frequency events to toBeScheduled.json
             if (frequency !== 'none') {
-                const eventId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                const eventData = {
-                    id: eventId,
+                const customEventData = {
+                    id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                     name,
                     description,
                     scheduledTime: scheduledStartTime.toISOString(),
@@ -196,8 +233,7 @@ module.exports = {
                     location,
                     createdBy: interaction.user.id,
                 };
-
-                saveToBeScheduled(eventData);
+                saveToBeScheduled(customEventData)
 
                 return interaction.reply({
                     content: `Event "${name}" scheduled successfully for ${scheduledStartTime.toLocaleString()}! Saved for custom scheduling with frequency: ${frequency}.`,
