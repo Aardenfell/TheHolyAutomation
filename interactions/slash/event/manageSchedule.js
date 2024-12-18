@@ -11,7 +11,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Paths to JSON data
-const toBeScheduledPath = path.join(__dirname, '../../../data/tobescheduled.json');
+const toBeScheduledPath = path.join(__dirname, '../../../data/toBeScheduled.json');
+const scheduledEventsPath = path.join(__dirname, '../../../data/scheduledEvents.json');
 
 // Load and save JSON utility functions
 const loadJsonData = (filePath) => {
@@ -24,30 +25,72 @@ const saveJsonData = (filePath, data) => {
 };
 
 /**
+ * @function parseDateTime
+ * @description Converts DD/MM/YY HH:MM or DD/MM HH:MM to ISO 8601 format.
+ * @param {string} input - The user-friendly date/time string.
+ * @returns {string|null} ISO 8601 formatted string or null if invalid.
+ */
+function parseDateTime(input) {
+    const dateTimeRegex = /^(\d{2})\/(\d{2})(?:\/(\d{2}))?\s+(\d{2}):(\d{2})$/;
+    const match = input.match(dateTimeRegex);
+
+    if (!match) return null;
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // JS months are 0-based
+    const year = match[3] ? 2000 + parseInt(match[3], 10) : new Date().getFullYear();
+    const hour = parseInt(match[4], 10);
+    const minute = parseInt(match[5], 10);
+
+    const date = new Date(year, month, day, hour, minute);
+    return isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/**
  * @function updateDiscordEvent
- * @description Updates the scheduled event via Discord API.
+ * @description Updates the scheduled event via Discord API using local cache.
  * @param {object} guild - The Discord guild object.
- * @param {object} eventData - The updated event data.
+ * @param {object} originalEventData - The original event data before changes.
+ * @param {object} updatedEventData - The updated event data to apply.
+ * @param {string} scheduledEventsPath - Path to the local cache of events.
  * @returns {Promise<void>}
  */
-async function updateDiscordEvent(guild, eventData) {
+async function updateDiscordEvent(guild, originalEventData, updatedEventData, scheduledEventsPath) {
     try {
-        const scheduledEvent = await guild.scheduledEvents.fetch(eventData.id);
+        const scheduledEvents = JSON.parse(fs.readFileSync(scheduledEventsPath, 'utf-8'));
+
+        // Normalize originalEventData scheduled time to Unix timestamp for comparison
+        const originalStartTimestamp = new Date(originalEventData.scheduledTime).getTime();
+
+        // Find the matching event in the local cache
+        const targetEvent = scheduledEvents.find(event =>
+            event.name === originalEventData.name &&
+            event.scheduledStartTimestamp === originalStartTimestamp
+        );
+
+        if (!targetEvent) throw new Error('Event not found in local cache');
+
+        // Fetch the event from Discord
+        const scheduledEvent = await guild.scheduledEvents.fetch(targetEvent.id);
         if (!scheduledEvent) throw new Error('Event not found on Discord.');
 
+        // Update the event on Discord
         await scheduledEvent.edit({
-            name: eventData.name,
-            scheduledStartTime: new Date(eventData.scheduledTime),
-            scheduledEndTime: new Date(new Date(eventData.scheduledTime).getTime() + eventData.duration * 60 * 1000),
-            description: eventData.description,
-            entityMetadata: eventData.location ? { location: eventData.location } : undefined,
+            name: updatedEventData.name,
+            scheduledStartTime: new Date(updatedEventData.scheduledTime),
+            scheduledEndTime: new Date(
+                new Date(updatedEventData.scheduledTime).getTime() + updatedEventData.duration * 60 * 1000
+            ),
+            description: updatedEventData.description,
+            entityMetadata: updatedEventData.location ? { location: updatedEventData.location } : undefined,
         });
 
-        console.log(`[MANAGE SCHEDULE] Updated Discord event "${eventData.name}".`);
+        console.log(`[MANAGE SCHEDULE] Updated Discord event "${updatedEventData.name}".`);
     } catch (error) {
         console.error(`[MANAGE SCHEDULE] Failed to update event on Discord: ${error.message}`);
     }
 }
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -94,15 +137,21 @@ module.exports = {
             return interaction.reply({ content: `Event with ID "${eventId}" not found.`, ephemeral: true });
         }
 
+        const scheduledEventsPath = path.join(__dirname, '../../../data/scheduledEvents.json'); // Path to the scheduled events cache
+
+        // Shallow copy the original event data before making changes
+        const originalEventData = { ...event };
+
         switch (action) {
             case 'edit_name':
                 event.name = newValue;
                 break;
             case 'edit_time':
-                if (isNaN(Date.parse(newValue))) {
-                    return interaction.reply({ content: 'Invalid date format. Use YYYY-MM-DDTHH:MM.', ephemeral: true });
+                const isoDate = parseDateTime(newValue);
+                if (!isoDate) {
+                    return interaction.reply({ content: 'Invalid date format. Use DD/MM/YY HH:MM or DD/MM HH:MM.', ephemeral: true });
                 }
-                event.scheduledTime = new Date(newValue).toISOString();
+                event.scheduledTime = isoDate;
                 break;
             case 'edit_duration':
                 const duration = parseInt(newValue, 10);
@@ -128,7 +177,7 @@ module.exports = {
                 return interaction.reply({ content: 'Invalid action.', ephemeral: true });
         }
 
-        // Save updated event data
+        // Save updated event data to toBeScheduled.json
         saveJsonData(toBeScheduledPath, toBeScheduled);
 
         // Optionally update the Discord API
@@ -137,9 +186,10 @@ module.exports = {
             if (!guild) {
                 return interaction.reply({ content: 'This command must be run in a Discord server.', ephemeral: true });
             }
-            await updateDiscordEvent(guild, event);
+            await updateDiscordEvent(guild, originalEventData, event, scheduledEventsPath);
         }
 
         return interaction.reply({ content: `Event "${event.name}" has been updated.`, ephemeral: true });
+
     },
 };
