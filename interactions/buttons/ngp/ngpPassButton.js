@@ -29,136 +29,137 @@ module.exports = {
      * @param {Object} client - The Discord client instance.
      */
     async execute(interaction, client) {
-        const [, , eventId] = interaction.customId.split('_');
-        const userId = `<@${interaction.user.id}>`;
+        try {
+            // Defer the reply to prevent token expiration
+            await interaction.deferReply({ ephemeral: true });
 
-        /**********************************************************************/
-        // Fetch Event Details
+            const [, , eventId] = interaction.customId.split('_');
+            const userId = `<@${interaction.user.id}>`;
 
-        const event = getNGPEventById(eventId);
+            /**********************************************************************/
+            // Fetch Event Details
 
-        if (!event) {
-            console.error(`[ ERROR ] Event with ID ${eventId} not found.`);
-            return await interaction.reply({
-                content: 'This NGP event no longer exists or has been removed.',
-                ephemeral: true,
-            });
-        }
+            const event = getNGPEventById(eventId);
 
-        /**********************************************************************/
-        // Event Validation and Participant Check
-
-        if (!event.active) {
-            return await interaction.reply({
-                content: 'This NGP event has already expired and is no longer active.',
-                ephemeral: true,
-            });
-        }
-
-        if (!event.participants) event.participants = [];
-
-        let participant;
-
-        // Check for private event participation
-        if (!event.is_open_ngp) {
-            participant = event.participants.find(p => p.name === userId);
-            if (!participant) {
-                return await interaction.reply({
-                    content: 'You are not a participant in this private NGP event and cannot roll.',
-                    ephemeral: true,
+            if (!event) {
+                console.error(`[ ERROR ] Event with ID ${eventId} not found.`);
+                return await interaction.editReply({
+                    content: 'This NGP event no longer exists or has been removed.',
                 });
             }
-        } else {
-            participant = event.participants.find(p => p.name === userId);
 
-            if (!participant) {
-                participant = { name: userId, roll_type: null, roll_value: null };
-                event.participants.push(participant);
+            /**********************************************************************/
+            // Event Validation and Participant Check
+
+            if (!event.active) {
+                return await interaction.editReply({
+                    content: 'This NGP event has already expired and is no longer active.',
+                });
             }
-        }
 
-        /**********************************************************************/
-        // Prevent Duplicate Rolls
+            if (!event.participants) event.participants = [];
 
-        if (participant.roll_value !== null) {
-            return await interaction.reply({
-                content: 'You have already rolled for this NGP event!',
-                ephemeral: true,
-            });
-        }
+            let participant;
 
-        participant.roll_type = 'Pass';
-        participant.roll_value = 'Pass';
-
-        /**********************************************************************/
-        // Save Updated Event Data
-
-        const eventsData = JSON.parse(fs.readFileSync(ngpEventsPath, 'utf-8'));
-        const eventIndex = eventsData.findIndex(e => e.event_id === eventId);
-        eventsData[eventIndex] = event;
-        saveNGPEvents(eventsData);
-
-        console.log(`[ NGP_PASS ] User ${interaction.user.id} passed on event ID ${eventId}.`);
-
-        await interaction.reply({
-            content: `You have chosen to pass on **${event.item}**`,
-            ephemeral: true,
-        });
-
-        /**********************************************************************/
-        // Thread Handling
-
-        const messageId = event.message_id;
-        let thread;
-
-        try {
-            const message = await interaction.channel.messages.fetch(messageId);
-
-            // Fetch or create thread
-            thread = message.hasThread ? await message.thread.fetch() : null;
-
-            if (!thread) {
-                try {
-                    thread = await message.startThread({
-                        name: `Rolls for ${event.item} | id:${eventId}`,
-                        autoArchiveDuration: 60,
-                        reason: `Thread for NGP event ${eventId}`,
+            // Check for private event participation
+            if (!event.is_open_ngp) {
+                participant = event.participants.find(p => p.name === userId);
+                if (!participant) {
+                    return await interaction.editReply({
+                        content: 'You are not a participant in this private NGP event and cannot roll.',
                     });
-                    console.log(`[ THREAD ] Created thread for event ID ${eventId}.`);
-                } catch (threadError) {
-                    if (threadError.code === 160004) {
-                        console.warn(`[ WARN ] Thread already exists for event ID ${eventId}.`);
-                        thread = message.thread || await message.fetchThread();
-                    } else {
-                        throw threadError;
+                }
+            } else {
+                participant = event.participants.find(p => p.name === userId);
+
+                if (!participant) {
+                    participant = { name: userId, roll_type: null, roll_value: null };
+                    event.participants.push(participant);
+                }
+            }
+
+            /**********************************************************************/
+            // Prevent Duplicate Rolls
+
+            if (participant.roll_value !== null) {
+                return await interaction.editReply({
+                    content: 'You have already rolled for this NGP event!',
+                });
+            }
+
+            participant.roll_type = 'Pass';
+            participant.roll_value = 'Pass';
+
+            /**********************************************************************/
+            // Save Updated Event Data
+
+            const eventsData = JSON.parse(fs.readFileSync(ngpEventsPath, 'utf-8'));
+            const eventIndex = eventsData.findIndex(e => e.event_id === eventId);
+            eventsData[eventIndex] = event;
+            saveNGPEvents(eventsData);
+
+            console.log(`[ NGP_PASS ] User ${interaction.user.id} passed on event ID ${eventId}.`);
+
+            await interaction.editReply({
+                content: `You have chosen to pass on **${event.item}**`,
+            });
+
+            /**********************************************************************/
+            // Thread Handling
+
+            const messageId = event.message_id;
+            let thread;
+
+            try {
+                const message = await interaction.channel.messages.fetch(messageId);
+
+                // Fetch or create thread
+                thread = message.hasThread ? await message.thread.fetch() : null;
+
+                if (!thread) {
+                    try {
+                        thread = await message.startThread({
+                            name: `Rolls for ${event.item} | id:${eventId}`,
+                            autoArchiveDuration: 60,
+                            reason: `Thread for NGP event ${eventId}`,
+                        });
+                        console.log(`[ THREAD ] Created thread for event ID ${eventId}.`);
+                    } catch (threadError) {
+                        if (threadError.code === 160004) {
+                            console.warn(`[ WARN ] Thread already exists for event ID ${eventId}.`);
+                            thread = message.thread || await message.fetchThread();
+                        } else {
+                            throw threadError;
+                        }
                     }
                 }
-            }
 
-            // Notify the thread about the pass
-            await thread.send({
-                content: `${userId} has rolled.`,
-                allowedMentions: { parse: [] },
-            });
+                // Notify the thread about the pass
+                await thread.send({
+                    content: `${userId} has rolled.`,
+                    allowedMentions: { parse: [] },
+                });
 
-            // Remove user from the thread if bidding is active
-            if (event.is_bidding) {
-                try {
-                    await thread.members.remove(interaction.user.id);
-                    console.log(`[ BIDDING ] Removed user ${interaction.user.id} from thread due to active bidding.`);
-                } catch (err) {
-                    console.error(`[ ERROR ] Failed to remove user ${interaction.user.id} from thread:`, err);
+                // Remove user from the thread if bidding is active
+                if (event.is_bidding) {
+                    try {
+                        await thread.members.remove(interaction.user.id);
+                        console.log(`[ BIDDING ] Removed user ${interaction.user.id} from thread due to active bidding.`);
+                    } catch (err) {
+                        console.error(`[ ERROR ] Failed to remove user ${interaction.user.id} from thread:`, err);
+                    }
                 }
-            }
 
-            // Check and declare the winner after all participants have acted
-            await checkAndDeclareWinner(eventId, interaction, client);
+                // Check and declare the winner after all participants have acted
+                await checkAndDeclareWinner(eventId, interaction, client);
+            } catch (error) {
+                console.error(`[ ERROR ] Failed to handle thread for event ID ${eventId}:`, error);
+                return await interaction.followUp({
+                    content: 'Failed to create or update the thread. Please try again.',
+                });
+            }
         } catch (error) {
-            console.error(`[ ERROR ] Failed to handle thread for event ID ${eventId}:`, error);
-            return await interaction.followUp({
-                content: 'Failed to create or update the thread. Please try again.',
-                ephemeral: true,
-            });
+            console.error('[ ERROR ] Failed to process NGP pass interaction:', error);
         }
     },
 };
