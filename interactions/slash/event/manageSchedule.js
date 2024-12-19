@@ -117,7 +117,8 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('new_value')
-                .setDescription('The new value for the selected action.')
+                .setDescription('Provide the new value based on the selected action.')
+                .setAutocomplete(true) // Enables dynamic suggestions for `new_value`
         )
         .addBooleanOption(option =>
             option.setName('update_api')
@@ -137,10 +138,8 @@ module.exports = {
             return interaction.reply({ content: `Event with ID "${eventId}" not found.`, ephemeral: true });
         }
 
-        const scheduledEventsPath = path.join(__dirname, '../../../data/scheduledEvents.json'); // Path to the scheduled events cache
-
-        // Shallow copy the original event data before making changes
-        const originalEventData = { ...event };
+        const scheduledEventsPath = path.join(__dirname, '../../../data/scheduledEvents.json');
+        const originalEventData = { ...event }; // Shallow copy the original event data
 
         switch (action) {
             case 'edit_name':
@@ -176,7 +175,7 @@ module.exports = {
             default:
                 return interaction.reply({ content: 'Invalid action.', ephemeral: true });
         }
-
+        
         // Save updated event data to toBeScheduled.json
         saveJsonData(toBeScheduledPath, toBeScheduled);
 
@@ -190,6 +189,5 @@ module.exports = {
         }
 
         return interaction.reply({ content: `Event "${event.name}" has been updated.`, ephemeral: true });
-
     },
 };
