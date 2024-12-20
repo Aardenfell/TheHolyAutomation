@@ -1,9 +1,9 @@
 /**
  * @file ngpExpirationCheck.js
- * @description Periodic check for expiration of NGP events and polls.
+ * @description Periodic check for expiration of NGP events and polls, including salary distribution scheduling.
  * @author Aardenfell
  * @since 1.0.0
- * @version 1.0.0
+ * @version 2.7.0
  */
 
 /**********************************************************************/
@@ -19,6 +19,36 @@ const { handlePollExpiration } = require('./pollHelpers');
 const { checkScheduledEvents } = require('./eventChecker');
 const { processToBeScheduled } = require('./eventScheduler');
 const { processAnnouncements, cleanupAnnouncements } = require('./eventAnnounce');
+const { distributeSalaries } = require('./salaryDistributor');
+
+/**********************************************************************/
+// Helper Functions
+
+/**
+ * @function scheduleNextThursday
+ * @description Schedules the salary distribution for the next Thursday at midnight.
+ * @returns {number} Delay in milliseconds until the next Thursday.
+ */
+function scheduleNextThursday() {
+    const now = new Date();
+    const nextThursday = new Date(now);
+
+    // Calculate the next Thursday (4 = Thursday)
+    const dayDifference = (4 - now.getDay() + 7) % 7 || 7; // Ensure it calculates 7 days if today is Thursday
+    nextThursday.setDate(now.getDate() + dayDifference);
+    nextThursday.setHours(0, 0, 0, 0); // Set time to midnight
+
+    const delay = nextThursday.getTime() - now.getTime();
+
+    if (delay <= 0) {
+        console.warn(`[ SALARY SCHEDULER ] Calculated a non-positive delay (${delay}). Adjusting for next week.`);
+        return 7 * 24 * 60 * 60 * 1000; // Default to 7 days in milliseconds
+    }
+
+    console.log(`[ SALARY SCHEDULER ] Next salary distribution scheduled in ${Math.round(delay / 1000 / 60)} minutes.`);
+    return delay;
+}
+
 
 /**********************************************************************/
 // Expiration Check Function
@@ -44,7 +74,7 @@ function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalM
         // Run the expiration handler for polls.
         await handlePollExpiration(client, currentTime);
 
-        // Run the announcment handler for scheduled events.
+        // Run the announcement handler for scheduled events.
         await processAnnouncements(client);
 
         await cleanupAnnouncements();
@@ -77,13 +107,36 @@ function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalM
             console.error('[EVENT CHECKER] Error during scheduled events cache update:', error);
         }
     }, cacheUpdateIntervalMs);
-}
 
+    // Schedule salary distribution
+    const delay = scheduleNextThursday();
+    console.log(`[ SALARY SCHEDULER ] Waiting ${Math.round(delay / 1000 / 60)} minutes for the first salary distribution.`);
+
+    setTimeout(async () => {
+        console.log('[ SALARY SCHEDULER ] Executing salary distribution...');
+        try {
+            await distributeSalaries(client); // Distribute salaries
+            console.log('[ SALARY SCHEDULER ] Salary distribution complete.');
+        } catch (error) {
+            console.error('[ SALARY SCHEDULER ] Error during salary distribution:', error);
+        }
+
+        // Schedule the next distribution every 7 days
+        setInterval(async () => {
+            console.log('[ SALARY SCHEDULER ] Executing weekly salary distribution...');
+            try {
+                await distributeSalaries(client);
+                console.log('[ SALARY SCHEDULER ] Weekly salary distribution complete.');
+            } catch (error) {
+                console.error('[ SALARY SCHEDULER ] Error during weekly salary distribution:', error);
+            }
+        }, 7 * 24 * 60 * 60 * 1000); // Weekly interval
+    }, delay);
+}
 
 /**********************************************************************/
 // Module Export
 
-// Export the startExpirationCheck function for use in other modules.
 module.exports = {
     startExpirationCheck,
 };
