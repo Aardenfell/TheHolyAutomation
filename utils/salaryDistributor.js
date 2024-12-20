@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { client_id } = require('../config.json');
 const { updateUserBalance, logTransaction } = require('./pointsHelper'); // Existing helper functions
 
 /**********************************************************************/
@@ -98,7 +99,7 @@ async function distributeSalaries(client) {
 
         // Log the salary transaction
         await logTransaction(client, {
-            senderId: 'Reserve',
+            senderId: client_id,
             recipientId: member.id,
             amountPerRecipient: totalSalary,
             reason: 'Weekly salary for auxiliary roles',
