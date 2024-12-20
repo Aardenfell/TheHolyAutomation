@@ -2,8 +2,8 @@
  * @file schedule.js
  * @description Slash command to create scheduled events with optional custom frequency handling.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 // TODO: Store pings/roles in event desc to be used later

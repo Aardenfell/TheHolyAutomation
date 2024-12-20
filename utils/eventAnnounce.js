@@ -2,8 +2,8 @@
  * @file eventAnnounce.js
  * @description Background process to announce scheduled events 5 minutes before their start time.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 const fs = require('fs');

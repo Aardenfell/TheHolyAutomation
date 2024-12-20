@@ -2,8 +2,8 @@
  * @file manageSchedule.js
  * @description Command to manage events stored in toBeScheduled.json, with optional updates to Discord API.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 const { SlashCommandBuilder } = require('discord.js');

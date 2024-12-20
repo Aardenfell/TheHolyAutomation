@@ -2,8 +2,8 @@
  * @file manageScheduleAutocomplete.js
  * @description Handles the autocomplete interaction for the "manageschedule" command to assist users with selecting events and dynamic suggestions for new values.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 /**********************************************************************/

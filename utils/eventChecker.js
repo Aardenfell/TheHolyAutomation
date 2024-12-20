@@ -2,8 +2,8 @@
  * @file eventChecker.js
  * @description Utility to monitor and save the status of scheduled Discord events to a JSON file.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 const { Collection } = require('discord.js');

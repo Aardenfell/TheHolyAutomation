@@ -2,8 +2,8 @@
  * @file eventScheduler.js
  * @description Background process to manage custom frequency events from `tobescheduled.json`.
  * @author Aardenfell
- * @since inDev
- * @version inDev
+ * @since 2.7.0
+ * @version 2.7.0
  */
 
 const fs = require('fs');
