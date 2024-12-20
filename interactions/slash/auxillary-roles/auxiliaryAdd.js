@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Path to auxiliary roles JSON
-const auxiliaryRolesPath = path.join(__dirname, '../data/auxiliaryRoles.json');
+const auxiliaryRolesPath = path.join(__dirname, '../../../data/auxiliaryRoles.json');
 
 /**********************************************************************/
 // Helper Functions
