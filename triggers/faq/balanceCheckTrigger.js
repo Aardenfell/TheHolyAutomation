@@ -2,7 +2,7 @@
  * @file Balance Check Trigger command.
  * @author Aardenfell
  * @since 2.7.0
- * @version 2.7.0
+ * @version 2.7.1
  */
 
 /**
@@ -40,6 +40,73 @@ module.exports = {
 		"i want to check my balance",
 		"help with balance",
 		"help with points",
+		"how do we see our points",
+
+		// Variations for "my" or "our" + "gp"/"dkp"
+		"my points",
+		"my gp",
+		"my dkp",
+		"our points",
+		"our gp",
+		"our dkp",
+		"can you show my points",
+		"can you show our points",
+		"where is my gp",
+		"where is our gp",
+		"how much gp do we have",
+		"how many points do we have",
+		"how many gp do we have",
+		"what is our balance",
+		"check our balance",
+		"check our points",
+		"view our points",
+		"help with our points",
+		"help with gp",
+		"help with our gp",
+		"how can i check gp",
+		"how can we check gp",
+		"can i see our points",
+
+		// Additional gp/dkp replacements for balance and points
+		"how do i check my gp",
+		"how do i check how many gp i have",
+		"check my gp",
+		"check dkp balance",
+		"dkp balance",
+		"how many dkp do i have",
+		"how do i see my gp",
+		"how do i see my dkp",
+		"gp check",
+		"dkp check",
+		"view my gp",
+		"view my dkp",
+		"how do i find my gp",
+		"how can i check my gp",
+		"how to check my gp",
+		"how can i check my dkp",
+		"how to check my dkp",
+		"can i see my gp",
+		"can i see my dkp",
+		"show my gp",
+		"show my dkp",
+		"how much dkp do i have",
+		"can you show my gp",
+		"can you show my dkp",
+		"find my gp",
+		"find my dkp",
+		"check my dkp",
+		"show me my gp",
+		"show me my dkp",
+		"help with dkp",
+		"help with my gp",
+		"help with my dkp",
+		"help with our dkp",
+		"where is my dkp",
+		"where is our dkp",
+		"what is my gp balance",
+		"what is my dkp balance",
+		"what is our gp balance",
+		"what is our dkp balance",
 	],
 
 	execute(message, args) {
