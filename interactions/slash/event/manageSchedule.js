@@ -119,10 +119,6 @@ module.exports = {
             option.setName('new_value')
                 .setDescription('Provide the new value based on the selected action.')
                 .setAutocomplete(true) // Enables dynamic suggestions for `new_value`
-        )
-        .addBooleanOption(option =>
-            option.setName('update_api')
-                .setDescription('Apply changes to Discord API. (Default: false)')
         ),
 
     async execute(interaction) {
