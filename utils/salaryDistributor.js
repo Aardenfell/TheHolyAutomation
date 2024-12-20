@@ -12,7 +12,6 @@
 const fs = require('fs');
 const path = require('path');
 const { updateUserBalance, logTransaction } = require('./pointsHelper'); // Existing helper functions
-// const { client } = require('./client'); // Discord client instance
 
 /**********************************************************************/
 // Configuration and Data Paths
@@ -53,8 +52,14 @@ const salaryRates = {
 /**
  * @function distributeSalaries
  * @description Distributes weekly salaries to guild members based on their roles.
+ * @param {object} client - The Discord client object.
  */
-async function distributeSalaries() {
+async function distributeSalaries(client) {
+    if (!client || !client.guilds) {
+        console.error('[ GP DISTRIBUTOR ] Invalid client object provided.');
+        return;
+    }
+
     console.log('[ GP DISTRIBUTOR ] Starting salary distribution...');
 
     // Fetch the first guild (adjust for multi-guild use cases if necessary)
