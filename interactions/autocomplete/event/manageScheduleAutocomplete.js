@@ -36,7 +36,6 @@ module.exports = {
             edit_name: ['New Event Name Example 1', 'Event Name Example 2'],
             edit_time: ['Format(24hr):','DD/MM/YY HH:MM', '21/12/24 20:00'],
             edit_duration: ['Format(in minutes):','15', '30', '60'], // in minutes
-            edit_pings: ['Format:','@Role1 @Role2'],
             edit_frequency: ['Format:','daily', 'weekly', 'custom', 'none'],
         };
 
