@@ -17,11 +17,28 @@ const { client } = require('./client'); // Discord client instance
 /**********************************************************************/
 // Configuration and Data Paths
 
+// TODO create error message to run /salary add 
 // Path to auxiliary roles configuration
 const auxiliaryRolesPath = path.join(__dirname, '../data/auxiliaryRoles.json');
 
-// Load auxiliary roles and salary rates
-const auxiliaryRoles = JSON.parse(fs.readFileSync(auxiliaryRolesPath, 'utf-8'));
+// Load auxiliary roles and salary rates with initialization
+function loadAuxiliaryRoles() {
+    try {
+        if (!fs.existsSync(auxiliaryRolesPath)) {
+            console.warn('[ GP DISTRIBUTOR ] Auxiliary roles file not found. Initializing default configuration.');
+            const defaultRoles = [];
+            fs.writeFileSync(auxiliaryRolesPath, JSON.stringify(defaultRoles, null, 2));
+        }
+        return JSON.parse(fs.readFileSync(auxiliaryRolesPath, 'utf-8'));
+    } catch (error) {
+        console.error('[ GP DISTRIBUTOR ] Error reading auxiliary roles file:', error);
+        return [];
+    }
+}
+
+// Initialize auxiliary roles
+const auxiliaryRoles = loadAuxiliaryRoles();
+
 
 // Salary rates by type
 const salaryRates = {
@@ -92,4 +109,4 @@ async function distributeSalaries() {
 /**********************************************************************/
 // Module Export
 
-module.exports = { distributeSalaries };
+module.exports = { distributeSalaries, loadAuxiliaryRoles };
