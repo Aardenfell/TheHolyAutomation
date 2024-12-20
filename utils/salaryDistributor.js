@@ -11,8 +11,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { updateUserBalance, logTransaction } = require('./pointsHelpers'); // Existing helper functions
-const { client } = require('./client'); // Discord client instance
+const { updateUserBalance, logTransaction } = require('./pointsHelper'); // Existing helper functions
+// const { client } = require('./client'); // Discord client instance
 
 /**********************************************************************/
 // Configuration and Data Paths

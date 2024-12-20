@@ -12,7 +12,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { loadAuxiliaryRoles } = require('./salaryDistributor');
+const { loadAuxiliaryRoles } = require('../../../utils/salaryDistributor');
 
 // Paths to JSON data files
 const auxiliaryRolesPath = path.join(__dirname, '../data/auxiliaryRoles.json');
