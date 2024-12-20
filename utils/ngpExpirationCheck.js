@@ -19,6 +19,26 @@ const { handlePollExpiration } = require('./pollHelpers');
 const { checkScheduledEvents } = require('./eventChecker');
 const { processToBeScheduled } = require('./eventScheduler');
 const { processAnnouncements, cleanupAnnouncements } = require('./eventAnnounce');
+const { distributeSalaries } = require('./salaryDistributor');
+
+/**********************************************************************/
+// Helper Functions
+
+/**
+ * @function scheduleNextThursday
+ * @description Schedules the salary distribution for the next Thursday at midnight.
+ * @returns {number} Delay in milliseconds until the next Thursday.
+ */
+function scheduleNextThursday() {
+    const now = new Date();
+    const nextThursday = new Date(now);
+
+    // Calculate the next Thursday (4 = Thursday)
+    nextThursday.setDate(now.getDate() + ((4 - now.getDay() + 7) % 7));
+    nextThursday.setHours(0, 0, 0, 0); // Set time to midnight
+
+    return nextThursday.getTime() - now.getTime();
+}
 
 /**********************************************************************/
 // Expiration Check Function
@@ -77,6 +97,13 @@ function startExpirationCheck(client, intervalMs = 1000, scheduledEventIntervalM
             console.error('[EVENT CHECKER] Error during scheduled events cache update:', error);
         }
     }, cacheUpdateIntervalMs);
+
+    // Schedule salary distribution
+    const delay = scheduleNextThursday();
+    setTimeout(() => {
+        distributeSalaries(client); // Distribute salaries
+        setInterval(() => distributeSalaries(client), 7 * 24 * 60 * 60 * 1000); // Weekly interval
+    }, delay);
 }
 
 
