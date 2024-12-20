@@ -60,6 +60,7 @@
         "recruitWelcome": "CHANNEL_ID_RECRUIT_WELCOME_HERE",
         "raidSupportThread": "CHANNEL_ID_RAID_SUPPORT_THREAD_HERE",
         "hubChannel": "CHANNEL_ID_HUB_CHANNEL_HERE",
+        "eventAnnounce": "THREAD_ID_EVENT_ANNOUNCE_HERE",
         "someOtherChannel": "CHANNEL_ID_HERE"
     }
 }

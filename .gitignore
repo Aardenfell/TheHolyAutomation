@@ -141,3 +141,8 @@ data/backup/add-to-task-scheduler.js
 data/backup/backup.js
 data/backup/remove-from-task-scheduler.js
 data/backup/run-backup.vbs
+data/scheduledEvents.json
+data/tobescheduled.json
+data/announcedEvents.json
+data/auxiliaryRoles.json
+interactions/slash/auxillary-roles/forceSalaryDistribute.js

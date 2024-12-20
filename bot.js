@@ -28,10 +28,12 @@ const client = new Client({
 	// Please add all intents you need, more detailed information @ https://ziad87.net/intents/
 	intents: [
 		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.DirectMessages,
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.MessageContent,
 		GatewayIntentBits.GuildVoiceStates,
+		GatewayIntentBits.GuildScheduledEvents
 	],
 	partials: [Partials.Channel],
 });
@@ -52,7 +54,7 @@ const eventFiles = fs
 for (const file of eventFiles) {
 	const event = require(`./events/${file}`);
 
-	console.log(`✅ Adding listener for event: ${event.name} from file: ${file}`);
+	console.log(`✅ [BOT] Adding listener for event: ${event.name} from file: ${file}`);
 	if (event.once) {
 		client.once(event.name, (...args) => event.execute(...args, client));
 	} else {
@@ -298,12 +300,23 @@ for (const folder of triggerFolders) {
 	}
 }
 /**********************************************************************/
-// Start timer
+// Misc Startup Functions
+
+const { initializeScheduledEvents } = require('./utils/eventScheduler');
 const { startExpirationCheck } = require('./utils/ngpExpirationCheck.js');
 
-// Start the expiration check when the bot is ready
-client.once('ready', () => {
-    startExpirationCheck(client); 
+client.once('ready', async () => {
+    console.log('[BOT] Starting initialization process...');
+
+    // Initialize scheduled events
+    await initializeScheduledEvents(client);
+    console.log(' ✅ [BOT] Scheduled events initialization complete.');
+
+    // Start the expiration check
+    console.log('[BOT] Starting expiration check...');
+    startExpirationCheck(client);
+
+    console.log('✅ [BOT] All startup processes completed.');
 });
 
 const { handleBidMessage } = require('./utils/bidHandler.js');
@@ -312,10 +325,9 @@ client.on('messageCreate', async (message) => {
     try {
         await handleBidMessage(message, client);
     } catch (error) {
-        console.error('Error handling bid message:', error);
+        console.error('[Bid] Error handling bid message:', error);
     }
 });
-
 
 
 // Login into your client application with bot's token.
