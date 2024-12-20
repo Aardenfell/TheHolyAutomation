@@ -39,12 +39,29 @@ module.exports = {
             edit_frequency: ['Format:','daily', 'weekly', 'custom', 'none'],
         };
 
-        if (optionName === 'new_value' && action && suggestions[action]) {
-            // Suggest values for the "new_value" option based on the selected action
-            const response = suggestions[action].filter(value => value.startsWith(focusedValue));
-            return await interaction.respond(
-                response.slice(0, 25).map(value => ({ name: value, value }))
-            );
+        
+
+        
+        if (optionName === 'new_value') {
+            if (action === 'edit_pings') {
+                // Fetch all roles from the server and filter based on input
+                const roles = interaction.guild.roles.cache
+                    .filter(role => role.name.toLowerCase().includes(focusedValue.toLowerCase()))
+                    .map(role => ({
+                        name: role.name,
+                        value: `<@&${role.id}>`, // Return mention format
+                    }));
+
+                return await interaction.respond(roles.slice(0, 25)); // Limit to the first 25 roles
+            }
+
+            if (action && suggestions[action]) {
+                // Suggest values for the "new_value" option based on the selected action
+                const response = suggestions[action].filter(value => value.startsWith(focusedValue));
+                return await interaction.respond(
+                    response.slice(0, 25).map(value => ({ name: value, value }))
+                );
+            }
         }
 
         /**********************************************************************/
