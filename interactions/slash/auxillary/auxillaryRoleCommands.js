@@ -30,156 +30,160 @@ function saveAuxiliaryRoles(data) {
 }
 
 /**********************************************************************/
-// Module Export: Slash Commands
+// Slash Commands
 
-module.exports = {
-    data: [
-        new SlashCommandBuilder()
-            .setName('auxiliaryadd')
-            .setDescription('Add a new role to the auxiliary roles list with a specific rate.')
-            .addRoleOption(option =>
-                option.setName('role')
-                    .setDescription('The role to add.')
-                    .setRequired(true))
-            .addStringOption(option =>
-                option.setName('rate')
-                    .setDescription('The salary rate for the role (High, Medium, Low).')
-                    .setRequired(true)
-                    .setAutocomplete(true)), // Use autocomplete for salary rates
-        new SlashCommandBuilder()
-            .setName('auxiliaryremove')
-            .setDescription('Remove a role from the auxiliary roles list.')
-            .addStringOption(option =>
-                option.setName('role')
-                    .setDescription('The role to remove.')
-                    .setRequired(true)
-                    .setAutocomplete(true)), // Use autocomplete for roles
-        new SlashCommandBuilder()
-            .setName('auxiliaryrate')
-            .setDescription('Edit the salary rate for an existing auxiliary role.')
-            .addStringOption(option =>
-                option.setName('role')
-                    .setDescription('The role to edit.')
-                    .setRequired(true)
-                    .setAutocomplete(true)) // Use autocomplete for roles
-            .addStringOption(option =>
-                option.setName('rate')
-                    .setDescription('The new salary rate (High, Medium, Low).')
-                    .setRequired(true)
-                    .setAutocomplete(true)), // Use autocomplete for salary rates
-        new SlashCommandBuilder()
-            .setName('auxiliarylist')
-            .setDescription('List all roles and their associated rates.'),
-    ],
+const auxiliaryAddCommand = new SlashCommandBuilder()
+    .setName('auxiliaryadd')
+    .setDescription('Add a new role to the auxiliary roles list with a specific rate.')
+    .addRoleOption(option =>
+        option.setName('role')
+            .setDescription('The role to add.')
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('rate')
+            .setDescription('The salary rate for the role (High, Medium, Low).')
+            .setRequired(true)
+            .setAutocomplete(true));
 
-    /**********************************************************************/
-    // Command Execution
+const auxiliaryRemoveCommand = new SlashCommandBuilder()
+    .setName('auxiliaryremove')
+    .setDescription('Remove a role from the auxiliary roles list.')
+    .addStringOption(option =>
+        option.setName('role')
+            .setDescription('The role to remove.')
+            .setRequired(true)
+            .setAutocomplete(true));
 
-    /**
-     * @function execute
-     * @description Handles the execution of the slash commands.
-     * @param {Object} interaction - The interaction object from Discord.
-     */
-    async execute(interaction) {
-        const command = interaction.commandName;
-        const auxiliaryRoles = loadAuxiliaryRoles();
+const auxiliaryRateCommand = new SlashCommandBuilder()
+    .setName('auxiliaryrate')
+    .setDescription('Edit the salary rate for an existing auxiliary role.')
+    .addStringOption(option =>
+        option.setName('role')
+            .setDescription('The role to edit.')
+            .setRequired(true)
+            .setAutocomplete(true))
+    .addStringOption(option =>
+        option.setName('rate')
+            .setDescription('The new salary rate (High, Medium, Low).')
+            .setRequired(true)
+            .setAutocomplete(true));
 
-        if (command === 'auxiliaryadd') {
-            const role = interaction.options.getRole('role');
-            const rate = interaction.options.getString('rate');
+const auxiliaryListCommand = new SlashCommandBuilder()
+    .setName('auxiliarylist')
+    .setDescription('List all roles and their associated rates.');
 
-            if (!['High', 'Medium', 'Low'].includes(rate)) {
-                return interaction.reply({
-                    content: 'Invalid rate. Please specify High, Medium, or Low.',
-                    ephemeral: true,
-                });
-            }
+/**********************************************************************/
+// Command Execution Functions
 
-            if (auxiliaryRoles.some(r => r.roleId === role.id)) {
-                return interaction.reply({
-                    content: 'This role is already in the auxiliary roles list.',
-                    ephemeral: true,
-                });
-            }
+async function executeAuxiliaryAdd(interaction) {
+    const role = interaction.options.getRole('role');
+    const rate = interaction.options.getString('rate');
+    const auxiliaryRoles = loadAuxiliaryRoles();
 
-            auxiliaryRoles.push({ roleId: role.id, salaryType: rate });
-            saveAuxiliaryRoles(auxiliaryRoles);
+    if (!['High', 'Medium', 'Low'].includes(rate)) {
+        return interaction.reply({
+            content: 'Invalid rate. Please specify High, Medium, or Low.',
+            ephemeral: true,
+        });
+    }
 
-            console.log(`[ AUXILIARY_ADD ] Added role ${role.id} with rate ${rate}.`);
-            return interaction.reply({
-                content: `Added role **${role.name}** with a salary rate of **${rate}**.`,
-                ephemeral: true,
-            });
-        }
+    if (auxiliaryRoles.some(r => r.roleId === role.id)) {
+        return interaction.reply({
+            content: 'This role is already in the auxiliary roles list.',
+            ephemeral: true,
+        });
+    }
 
-        if (command === 'auxiliaryremove') {
-            const role = interaction.options.getRole('role');
+    auxiliaryRoles.push({ roleId: role.id, salaryType: rate });
+    saveAuxiliaryRoles(auxiliaryRoles);
 
-            const index = auxiliaryRoles.findIndex(r => r.roleId === role.id);
-            if (index === -1) {
-                return interaction.reply({
-                    content: 'This role is not in the auxiliary roles list.',
-                    ephemeral: true,
-                });
-            }
+    console.log(`[ AUXILIARY_ADD ] Added role ${role.id} with rate ${rate}.`);
+    return interaction.reply({
+        content: `Added role **${role.name}** with a salary rate of **${rate}**.`,
+        ephemeral: true,
+    });
+}
 
-            auxiliaryRoles.splice(index, 1);
-            saveAuxiliaryRoles(auxiliaryRoles);
+async function executeAuxiliaryRemove(interaction) {
+    const role = interaction.options.getString('role');
+    const auxiliaryRoles = loadAuxiliaryRoles();
 
-            console.log(`[ AUXILIARY_REMOVE ] Removed role ${role.id} from the list.`);
-            return interaction.reply({
-                content: `Removed role **${role.name}** from the auxiliary roles list.`,
-                ephemeral: true,
-            });
-        }
+    const index = auxiliaryRoles.findIndex(r => r.roleId === role);
+    if (index === -1) {
+        return interaction.reply({
+            content: 'This role is not in the auxiliary roles list.',
+            ephemeral: true,
+        });
+    }
 
-        if (command === 'auxiliaryrate') {
-            const role = interaction.options.getRole('role');
-            const rate = interaction.options.getString('rate');
+    auxiliaryRoles.splice(index, 1);
+    saveAuxiliaryRoles(auxiliaryRoles);
 
-            if (!['High', 'Medium', 'Low'].includes(rate)) {
-                return interaction.reply({
-                    content: 'Invalid rate. Please specify High, Medium, or Low.',
-                    ephemeral: true,
-                });
-            }
+    console.log(`[ AUXILIARY_REMOVE ] Removed role ${role} from the list.`);
+    return interaction.reply({
+        content: `Removed role <@&${role}> from the auxiliary roles list.`,
+        ephemeral: true,
+    });
+}
 
-            const roleData = auxiliaryRoles.find(r => r.roleId === role.id);
-            if (!roleData) {
-                return interaction.reply({
-                    content: 'This role is not in the auxiliary roles list.',
-                    ephemeral: true,
-                });
-            }
+async function executeAuxiliaryRate(interaction) {
+    const role = interaction.options.getString('role');
+    const rate = interaction.options.getString('rate');
+    const auxiliaryRoles = loadAuxiliaryRoles();
 
-            roleData.salaryType = rate;
-            saveAuxiliaryRoles(auxiliaryRoles);
+    if (!['High', 'Medium', 'Low'].includes(rate)) {
+        return interaction.reply({
+            content: 'Invalid rate. Please specify High, Medium, or Low.',
+            ephemeral: true,
+        });
+    }
 
-            console.log(`[ AUXILIARY_RATE ] Updated rate for role ${role.id} to ${rate}.`);
-            return interaction.reply({
-                content: `Updated salary rate for role **${role.name}** to **${rate}**.`,
-                ephemeral: true,
-            });
-        }
+    const roleData = auxiliaryRoles.find(r => r.roleId === role);
+    if (!roleData) {
+        return interaction.reply({
+            content: 'This role is not in the auxiliary roles list.',
+            ephemeral: true,
+        });
+    }
 
-        if (command === 'auxiliarylist') {
-            if (auxiliaryRoles.length === 0) {
-                console.log(`[ AUXILIARY_LIST ] No roles found.`);
-                return interaction.reply({
-                    content: 'No auxiliary roles have been configured.',
-                    ephemeral: true,
-                });
-            }
+    roleData.salaryType = rate;
+    saveAuxiliaryRoles(auxiliaryRoles);
 
-            const roleList = auxiliaryRoles
-                .map(role => `• <@&${role.roleId}>: ${role.salaryType}`)
-                .join('\n');
+    console.log(`[ AUXILIARY_RATE ] Updated rate for role ${role} to ${rate}.`);
+    return interaction.reply({
+        content: `Updated salary rate for role <@&${role}> to **${rate}**.`,
+        ephemeral: true,
+    });
+}
 
-            console.log(`[ AUXILIARY_LIST ] Listed ${auxiliaryRoles.length} roles.`);
-            return interaction.reply({
-                content: `**Auxiliary Roles List:**\n${roleList}`,
-                ephemeral: true,
-            });
-        }
-    },
-};
+async function executeAuxiliaryList(interaction) {
+    const auxiliaryRoles = loadAuxiliaryRoles();
+
+    if (auxiliaryRoles.length === 0) {
+        console.log(`[ AUXILIARY_LIST ] No roles found.`);
+        return interaction.reply({
+            content: 'No auxiliary roles have been configured.',
+            ephemeral: true,
+        });
+    }
+
+    const roleList = auxiliaryRoles
+        .map(role => `• <@&${role.roleId}>: ${role.salaryType}`)
+        .join('\n');
+
+    console.log(`[ AUXILIARY_LIST ] Listed ${auxiliaryRoles.length} roles.`);
+    return interaction.reply({
+        content: `**Auxiliary Roles List:**\n${roleList}`,
+        ephemeral: true,
+    });
+}
+
+/**********************************************************************/
+// Module Exports
+
+module.exports = [
+    { data: auxiliaryAddCommand, execute: executeAuxiliaryAdd },
+    { data: auxiliaryRemoveCommand, execute: executeAuxiliaryRemove },
+    { data: auxiliaryRateCommand, execute: executeAuxiliaryRate },
+    { data: auxiliaryListCommand, execute: executeAuxiliaryList },
+];
