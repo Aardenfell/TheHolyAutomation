@@ -46,9 +46,13 @@ module.exports = {
         .addStringOption(option =>
             option
                 .setName('rate')
-                .setDescription('The salary rate for the role (High, Medium, Low).')
+                .setDescription('The new salary rate (High, Medium, Low).')
                 .setRequired(true)
-                .setAutocomplete(true)),
+                .addChoices(
+                    { name: 'Low', value: 'Low' },
+                    { name: 'Medium', value: 'Medium' },
+                    { name: 'High', value: 'High' }
+                )),
 
     /**
      * @function execute

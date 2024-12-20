@@ -55,15 +55,15 @@ module.exports = {
             return await interaction.respond(filteredRoles.slice(0, 25));
         }
 
-        if (optionName === 'rate') {
-            // Suggest valid salary rates
-            const rates = ['High', 'Medium', 'Low'];
-            const filteredRates = rates
-                .filter(rate => rate.toLowerCase().startsWith(focusedValue.toLowerCase()))
-                .map(rate => ({ name: rate, value: rate }));
+        // if (optionName === 'rate') {
+        //     // Suggest valid salary rates
+        //     const rates = ['High', 'Medium', 'Low'];
+        //     const filteredRates = rates
+        //         .filter(rate => rate.toLowerCase().startsWith(focusedValue.toLowerCase()))
+        //         .map(rate => ({ name: rate, value: rate }));
 
-            return await interaction.respond(filteredRates);
-        }
+        //     return await interaction.respond(filteredRates);
+        // }
 
         // Default empty response
         await interaction.respond([]);

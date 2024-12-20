@@ -49,7 +49,11 @@ module.exports = {
                 .setName('rate')
                 .setDescription('The new salary rate (High, Medium, Low).')
                 .setRequired(true)
-                .setAutocomplete(true)),
+                .addChoices(
+                    { name: 'Low', value: 'Low' },
+                    { name: 'Medium', value: 'Medium' },
+                    { name: 'High', value: 'High' }
+                )),
 
     /**
      * @function execute
