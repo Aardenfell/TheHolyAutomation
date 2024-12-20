@@ -129,7 +129,6 @@ module.exports = {
         const eventId = interaction.options.getString('event_id');
         const action = interaction.options.getString('action');
         const newValue = interaction.options.getString('new_value');
-        const updateApi = interaction.options.getBoolean('update_api') || false;
 
         const toBeScheduled = loadJsonData(toBeScheduledPath);
         const event = toBeScheduled.find(e => e.id === eventId);
@@ -167,7 +166,9 @@ module.exports = {
                     return interaction.reply({ content: 'Invalid frequency. Choose daily, weekly, custom, or none.', ephemeral: true });
                 }
                 event.frequency = newValue;
-                break;
+                // Skip API update for frequency changes
+                saveJsonData(toBeScheduledPath, toBeScheduled);
+                return interaction.reply({ content: `Frequency for event "${event.name}" has been updated.`, ephemeral: true });
             case 'delete':
                 toBeScheduled.splice(toBeScheduled.indexOf(event), 1);
                 saveJsonData(toBeScheduledPath, toBeScheduled);
@@ -175,18 +176,16 @@ module.exports = {
             default:
                 return interaction.reply({ content: 'Invalid action.', ephemeral: true });
         }
-        
+
         // Save updated event data to toBeScheduled.json
         saveJsonData(toBeScheduledPath, toBeScheduled);
 
-        // Optionally update the Discord API
-        if (updateApi) {
-            const guild = interaction.guild;
-            if (!guild) {
-                return interaction.reply({ content: 'This command must be run in a Discord server.', ephemeral: true });
-            }
-            await updateDiscordEvent(guild, originalEventData, event, scheduledEventsPath);
+        // Always update the Discord API except for frequency changes
+        const guild = interaction.guild;
+        if (!guild) {
+            return interaction.reply({ content: 'This command must be run in a Discord server.', ephemeral: true });
         }
+        await updateDiscordEvent(guild, originalEventData, event, scheduledEventsPath);
 
         return interaction.reply({ content: `Event "${event.name}" has been updated.`, ephemeral: true });
     },
