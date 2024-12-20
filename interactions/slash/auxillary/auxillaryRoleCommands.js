@@ -44,25 +44,29 @@ module.exports = {
             .addStringOption(option =>
                 option.setName('rate')
                     .setDescription('The salary rate for the role (High, Medium, Low).')
-                    .setRequired(true)),
+                    .setRequired(true)
+                    .setAutocomplete(true)), // Use autocomplete for salary rates
         new SlashCommandBuilder()
             .setName('auxiliaryremove')
             .setDescription('Remove a role from the auxiliary roles list.')
-            .addRoleOption(option =>
+            .addStringOption(option =>
                 option.setName('role')
                     .setDescription('The role to remove.')
-                    .setRequired(true)),
+                    .setRequired(true)
+                    .setAutocomplete(true)), // Use autocomplete for roles
         new SlashCommandBuilder()
             .setName('auxiliaryrate')
             .setDescription('Edit the salary rate for an existing auxiliary role.')
-            .addRoleOption(option =>
+            .addStringOption(option =>
                 option.setName('role')
                     .setDescription('The role to edit.')
-                    .setRequired(true))
+                    .setRequired(true)
+                    .setAutocomplete(true)) // Use autocomplete for roles
             .addStringOption(option =>
                 option.setName('rate')
                     .setDescription('The new salary rate (High, Medium, Low).')
-                    .setRequired(true)),
+                    .setRequired(true)
+                    .setAutocomplete(true)), // Use autocomplete for salary rates
         new SlashCommandBuilder()
             .setName('auxiliarylist')
             .setDescription('List all roles and their associated rates.'),
